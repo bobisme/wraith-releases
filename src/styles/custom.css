@@ -1,0 +1,242 @@
+/* Spectral Engineering Design System for wraith.cx */
+/* Fonts: Space Grotesk (headers/labels) + Inter (body) */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+/* ============================================================
+   Design Tokens — Starlight CSS custom property overrides
+   ============================================================ */
+:root {
+  /* Disable light mode entirely */
+  color-scheme: dark;
+}
+
+:root,
+[data-theme='dark'] {
+  /* Surface architecture */
+  --sl-color-bg: #131313;
+  --sl-color-bg-nav: #0e0e0eee;
+  --sl-color-bg-sidebar: #131313;
+  --sl-color-bg-inline-code: #1c1b1b;
+
+  /* Accent — spectral violet */
+  --sl-color-accent-low: #1a1525;
+  --sl-color-accent: #d2bcfb;
+  --sl-color-accent-high: #ede6ff;
+
+  /* Text tokens */
+  --sl-color-white: #ededed;
+  --sl-color-gray-1: #d4d4d4;
+  --sl-color-gray-2: #a3a3a3;
+  --sl-color-gray-3: #737373;
+  --sl-color-gray-4: #49454f;
+  --sl-color-gray-5: #2a2a2a;
+  --sl-color-gray-6: #1c1b1b;
+  --sl-color-gray-7: #0e0e0e;
+  --sl-color-black: #0a0a0a;
+
+  /* Text colors */
+  --sl-color-text: #d4d4d4;
+  --sl-color-text-accent: #d2bcfb;
+
+  /* Typography */
+  --sl-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sl-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* 0px border radius — brutalist */
+  --sl-border-radius: 0px;
+
+  /* No borders — tonal shifts only */
+  --sl-color-hairline: transparent;
+  --sl-color-hairline-shade: transparent;
+  --sl-color-hairline-light: transparent;
+}
+
+/* ============================================================
+   Global overrides
+   ============================================================ */
+
+/* Force dark background on body */
+html,
+body {
+  background: #131313;
+  color: #d4d4d4;
+}
+
+/* Headers use Space Grotesk */
+h1, h2, h3, h4, h5, h6,
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4 {
+  font-family: 'Space Grotesk', var(--sl-font);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================================
+   Navigation
+   ============================================================ */
+
+/* Nav bar — glass effect with backdrop blur */
+starlight-header,
+header.header {
+  background: #0e0e0eee !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: none !important;
+}
+
+/* Site title styling */
+.site-title {
+  font-family: 'Space Grotesk', var(--sl-font) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+  text-transform: lowercase;
+}
+
+/* Sidebar — no border, tonal shift */
+.sidebar-pane {
+  background: #131313;
+  border-right: none !important;
+}
+
+nav.sidebar a {
+  border-radius: 0 !important;
+}
+
+nav.sidebar a[aria-current='page'],
+nav.sidebar a[aria-current='page']:hover {
+  background: #1c1b1b;
+  border-left: 2px solid #d2bcfb;
+  border-radius: 0;
+  color: #ededed !important;
+}
+
+/* ============================================================
+   Code blocks — hero component
+   ============================================================ */
+
+/* No window chrome, dark background */
+pre,
+.expressive-code pre,
+.expressive-code .frame {
+  background: #0e0e0e !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.expressive-code .frame::before,
+.expressive-code .header {
+  display: none !important;
+}
+
+.expressive-code {
+  --ec-codeBg: #0e0e0e;
+  --ec-codeFont: 'JetBrains Mono', 'Fira Code', monospace;
+  --ec-codeFontSize: 0.875rem;
+  --ec-brdRad: 0;
+  --ec-brdCol: transparent;
+  --ec-frm-frameBoxShdCssVal: none;
+}
+
+code {
+  border-radius: 0 !important;
+}
+
+/* ============================================================
+   Components — 0px radius everywhere
+   ============================================================ */
+
+/* All buttons */
+a, button, .sl-link-button {
+  border-radius: 0 !important;
+}
+
+/* Cards */
+.card, .sl-card {
+  border-radius: 0 !important;
+  border: none !important;
+  background: #1c1b1b;
+}
+
+/* Tables */
+table {
+  border-radius: 0;
+}
+
+th {
+  background: #1c1b1b;
+  font-family: 'Space Grotesk', var(--sl-font);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+td, th {
+  border-color: #2a2a2a !important;
+}
+
+/* ============================================================
+   Starlight content area
+   ============================================================ */
+
+.sl-markdown-content {
+  font-family: 'Inter', var(--sl-font);
+}
+
+/* Remove any remaining rounded corners from Starlight */
+* {
+  --sl-border-radius: 0px;
+}
+
+/* Pagination links */
+.pagination-links a {
+  border: 1px solid #2a2a2a !important;
+  border-radius: 0 !important;
+  background: #1c1b1b;
+}
+
+.pagination-links a:hover {
+  background: #2a2a2a;
+  border-color: #d2bcfb !important;
+}
+
+/* TOC */
+starlight-toc a {
+  border-radius: 0 !important;
+}
+
+/* Search */
+site-search button {
+  border-radius: 0 !important;
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0e0e0e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #49454f;
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+.page-footer {
+  border-top: none !important;
+}

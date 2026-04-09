@@ -1,0 +1,21 @@
+{
+  "name": "wraith-releases",
+  "version": "0.3.0",
+  "description": "wraith.cx - API digital twin platform",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bobisme/wraith-releases.git"
+  },
+  "license": "ELv2",
+  "dependencies": {
+    "@astrojs/starlight": "^0.38.3",
+    "astro": "^6.1.4"
+  }
+}

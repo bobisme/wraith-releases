@@ -1,0 +1,699 @@
+---
+import Layout from '../layouts/Landing.astro';
+---
+
+<Layout title="wraith -- Record any API. Run a verified local twin.">
+
+  <!-- ============================================================
+       HERO
+       ============================================================ -->
+  <section class="hero">
+    <canvas id="hero-bg" class="hero-canvas"></canvas>
+    <div class="hero-inner hero-grid">
+      <div class="hero-content">
+        <h1 class="hero-headline">
+          Record any API.<br />
+          <span class="hero-accent">Run a verified local twin.</span><br />
+          Zero flaky tests.
+        </h1>
+        <p class="hero-sub">
+          Verified conformance: every twin is tested against real API recordings before it serves a single response.
+        </p>
+
+        <div class="hero-cta">
+          <a href="/installation/" class="btn-primary">Install_</a>
+          <a href="/quickstart/" class="btn-secondary">Quickstart &#x2192;</a>
+        </div>
+
+        <div class="hero-install-hint">
+          <code>brew install bobisme/tap/wraith</code>
+        </div>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-chrome">
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-title">wraith -- payments-api</span>
+        </div>
+        <div class="terminal-body">
+          <pre><code><span class="prompt">$</span> wraith <span class="t-cmd">init</span> payments --base-url <span class="t-str">https://api.example.com</span>
+<span class="prompt">$</span> wraith <span class="t-cmd">record</span> payments --port <span class="t-num">8080</span>
+<span class="prompt">$</span> wraith <span class="t-cmd">synth</span> payments
+<span class="prompt">$</span> wraith <span class="t-cmd">check</span> payments --in-memory  <span class="comment"># <span class="t-ok">100% conformance</span></span>
+<span class="prompt">$</span> wraith <span class="t-cmd">serve</span> payments --port <span class="t-num">8081</span>  <span class="comment"># twin is live</span></code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       METRICS STRIP
+       ============================================================ -->
+  <section class="metrics">
+    <div class="metrics-inner">
+      <div class="metric">
+        <span class="metric-label">APIs validated</span>
+        <span class="metric-value">18</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Conformance rate</span>
+        <span class="metric-value">100%</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Synthetic tests</span>
+        <span class="metric-value">~1,900</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Binary size</span>
+        <span class="metric-value">14MB</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PITCH
+       ============================================================ -->
+  <section class="pitch">
+    <div class="section-inner">
+      <p class="pitch-text">
+        Stop paying for staging APIs. Stop battling non-deterministic third-party responses. Record reality, serve the ghost.
+      </p>
+      <div class="protocol-badges">
+        <span class="protocol-badge">Rest</span>
+        <span class="protocol-badge">gRPC</span>
+        <span class="protocol-badge">GraphQL</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       THE PROBLEM
+       ============================================================ -->
+  <section class="problem">
+    <div class="section-inner">
+      <div class="problem-layout">
+        <div class="problem-text">
+          <h2 class="section-title">The mock integrity crisis_</h2>
+          <p class="problem-desc">Mocks are lies. They rot the moment you write them. When your staging environment is down, your CI fails for the wrong reasons.</p>
+          <p class="problem-quote">No other tool maintains objective evidence that your mock matches reality. wraith does.</p>
+        </div>
+        <div class="problem-table">
+          <div class="problem-table-header">
+            <span>Problem vector</span>
+            <span>Impact on engineering</span>
+          </div>
+          <div class="problem-row">
+            <span class="problem-issue">Rate limits</span>
+            <span class="problem-impact">Stalled developer workflows and CI bottlenecks</span>
+          </div>
+          <div class="problem-row">
+            <span class="problem-issue">Variable costs</span>
+            <span class="problem-impact">$5K-50K per month in third-party sandbox fees</span>
+          </div>
+          <div class="problem-row">
+            <span class="problem-issue">Outages</span>
+            <span class="problem-impact">Cascading downtime when external APIs are unstable</span>
+          </div>
+          <div class="problem-row">
+            <span class="problem-issue">Behavior drift</span>
+            <span class="problem-impact">Mocks pass tests that fail in production environments</span>
+          </div>
+          <div class="problem-row">
+            <span class="problem-issue">Non-determinism</span>
+            <span class="problem-impact">Flaky CI results causing deployment paralysis</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       HOW IT WORKS
+       ============================================================ -->
+  <section class="how-it-works">
+    <div class="section-inner">
+      <span class="section-label">The spectral lifecycle</span>
+      <h2 class="section-title">Closed-loop verification</h2>
+      <p class="section-desc">Record, synthesize, verify, serve. Five commands from zero to a verified local twin.</p>
+
+      <!-- Live demo: terminal + diagram -->
+      <div class="demo-split" id="demo">
+        <div class="demo-term">
+          <div class="terminal">
+            <div class="terminal-chrome">
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-title">wraith demo</span>
+            </div>
+            <div class="terminal-body">
+              <pre id="demo-output"></pre>
+            </div>
+          </div>
+        </div>
+        <div class="demo-viz" id="demo-viz">
+          <div class="viz-topo">
+            <!-- Your App (always visible, left) -->
+            <div class="viz-card" id="viz-app">
+              <div class="viz-card-icon">&#9632;</div>
+              <div class="viz-card-name">Your app</div>
+            </div>
+
+            <!-- Left connection (app → middle) -->
+            <div class="viz-conn" id="viz-edge-1">
+              <svg class="viz-arrow" viewBox="0 0 60 20" preserveAspectRatio="none">
+                <line x1="0" y1="10" x2="50" y2="10" stroke="currentColor" stroke-width="1" stroke-dasharray="4 3" />
+                <polygon points="50,5 60,10 50,15" fill="currentColor" />
+              </svg>
+              <span class="viz-dots" id="viz-dots-1"></span>
+            </div>
+
+            <!-- Middle slot: wraith OR twin (swap via opacity) -->
+            <div class="viz-middle">
+              <div class="viz-card viz-card-primary" id="viz-wraith" style="opacity:0">
+                <span class="viz-indicator" id="viz-rec-dot"></span>
+                <div class="viz-card-icon">&#9673;</div>
+                <div class="viz-card-name">wraith</div>
+                <div class="viz-card-port">:8080</div>
+              </div>
+              <div class="viz-card viz-card-twin" id="viz-twin" style="opacity:0">
+                <span class="viz-indicator" id="viz-check"></span>
+                <div class="viz-card-icon">&#9681;</div>
+                <div class="viz-card-name">Twin</div>
+                <div class="viz-card-port">:8081</div>
+              </div>
+            </div>
+
+            <!-- Right connection (middle → API) -->
+            <div class="viz-conn" id="viz-edge-2">
+              <svg class="viz-arrow" viewBox="0 0 60 20" preserveAspectRatio="none">
+                <line x1="0" y1="10" x2="50" y2="10" stroke="currentColor" stroke-width="1" stroke-dasharray="4 3" />
+                <polygon points="50,5 60,10 50,15" fill="currentColor" />
+              </svg>
+              <span class="viz-dots" id="viz-dots-2"></span>
+            </div>
+
+            <!-- Live API (right, fades when twin takes over) -->
+            <div class="viz-card" id="viz-api">
+              <div class="viz-card-icon">&#9729;</div>
+              <div class="viz-card-name">Live API</div>
+            </div>
+          </div>
+
+          <!-- Status + counter -->
+          <div class="viz-hud">
+            <div class="viz-status" id="viz-status"></div>
+            <div class="viz-counter" id="viz-counter" style="display:none">
+              <span class="viz-counter-val" id="viz-counter-val">0</span>
+              <span class="viz-counter-label">captured</span>
+            </div>
+          </div>
+
+          <!-- Badge (appears after verification) -->
+          <div class="viz-badge-row">
+            <div class="viz-badge" id="viz-badge" style="opacity:0">
+              <span class="viz-badge-icon">&#10003;</span> 100% conformance
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>Symbolic conformance</h3>
+          <p>Mathematical proof that synthesized twins match captured behavior across edge cases.</p>
+        </div>
+        <div class="feature-card">
+          <h3>No spec required</h3>
+          <p>No Swagger or OpenAPI docs? No problem. Wraith derives schema from observable reality.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Deterministic</h3>
+          <p>Pins random IDs and timestamps into static constants for 100% test reliability.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Safe capture</h3>
+          <p>Automatic PII scrubbing and credential sanitization at the proxy layer.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOR AGENTS
+       ============================================================ -->
+  <section class="for-agents">
+    <div class="section-inner">
+      <div class="agents-card">
+        <div class="agents-left">
+          <span class="agents-label">For LLM agents</span>
+          <h2 class="agents-headline">Your agents deserve reproducible worlds.</h2>
+          <p class="agents-pitch">
+            "Containers gave you reproducible compute environments. wraith gives you reproducible API environments. Your agents need both."
+          </p>
+          <ul class="agents-list">
+            <li>Structured exit codes (0-4)</li>
+            <li>Native --format json support</li>
+            <li>Sandbox isolation for code execution</li>
+          </ul>
+        </div>
+        <div class="agents-right">
+          <div class="terminal">
+            <div class="terminal-chrome">
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-dot"></span>
+              <span class="terminal-title">wraith -- payments</span>
+            </div>
+            <div class="terminal-body">
+              <pre><code><span class="comment"># agent simulation trace</span>
+
+<span class="prompt">$</span> Running wraith check...
+  status: <span class="t-str">"diverged"</span>
+  field_delta: [<span class="t-str">"body.payment_intent.id"</span>,
+    <span class="t-str">"body.amount"</span>, <span class="t-str">"body.currency"</span>]
+  severity: <span class="t-warn">"high"</span>
+  conformance: <span class="t-num">0.89</span></code></pre>
+              <div class="exit-code-badge">Exit code: 2</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       INSTALL
+       ============================================================ -->
+  <section class="install-section">
+    <div class="section-inner">
+      <h3 class="install-headline">Deployment quickstart</h3>
+
+      <div class="install-tabs">
+        <div class="install-tab active" data-tab="homebrew">Homebrew</div>
+        <div class="install-tab" data-tab="curl">Curl</div>
+        <div class="install-tab" data-tab="manual">Manual</div>
+      </div>
+
+      <div class="install-content" id="tab-homebrew">
+        <div class="terminal">
+          <div class="terminal-chrome">
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-title">terminal</span>
+          </div>
+          <div class="terminal-body">
+            <pre><code><span class="prompt">$</span> brew tap bobisme/tap
+<span class="prompt">$</span> brew install wraith
+<span class="prompt">$</span> wraith --version
+<span class="t-ok">wraith 0.9.1</span> <span class="comment">(aarch64-linux, static)</span></code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="install-content hidden" id="tab-curl">
+        <div class="terminal">
+          <div class="terminal-chrome">
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-title">terminal</span>
+          </div>
+          <div class="terminal-body">
+            <pre><code><span class="prompt">$</span> curl -fsSL https://wraith.cx/install.sh | sh
+<span class="prompt">$</span> wraith --version
+<span class="t-ok">wraith 0.9.1</span> <span class="comment">(aarch64-linux, static)</span></code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="install-content hidden" id="tab-manual">
+        <div class="terminal">
+          <div class="terminal-chrome">
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-dot"></span>
+            <span class="terminal-title">terminal</span>
+          </div>
+          <div class="terminal-body">
+            <pre><code><span class="comment"># Download from GitHub Releases</span>
+<span class="prompt">$</span> tar -xzf wraith-*.tar.gz
+<span class="prompt">$</span> sudo install -m 0755 wraith /usr/local/bin/wraith
+<span class="prompt">$</span> wraith --version
+<span class="t-ok">wraith 0.9.1</span> <span class="comment">(aarch64-linux, static)</span></code></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="install-ctas">
+        <a href="/quickstart/" class="btn-primary">Explore documentation</a>
+        <a href="/quickstart/" class="btn-secondary">View examples</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-brand">wraith</span>
+        <span class="footer-license">Elastic License 2.0</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/bobisme/wraith-releases">GitHub</a>
+        <a href="/quickstart/">Docs</a>
+        <a href="/changelog/">Changelog</a>
+        <a href="https://github.com/bobisme/wraith-releases/issues">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+</Layout>
+
+<script>
+  // Install tab switching
+  document.querySelectorAll('.install-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.install-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.install-content').forEach(c => c.classList.add('hidden'));
+      tab.classList.add('active');
+      const target = tab.getAttribute('data-tab');
+      if (target) {
+        const el = document.getElementById('tab-' + target);
+        if (el) el.classList.remove('hidden');
+      }
+    });
+  });
+
+  // Demo: typing terminal + reactive diagram
+  (function() {
+    const out = document.getElementById('demo-output');
+    if (!out) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const $ = id => document.getElementById(id);
+    const status    = $('viz-status');
+    const badge     = $('viz-badge');
+    const dots1     = $('viz-dots-1');
+    const dots2     = $('viz-dots-2');
+    const edge1     = $('viz-edge-1');
+    const edge2     = $('viz-edge-2');
+    const recDot    = $('viz-rec-dot');
+    const vizCheck  = $('viz-check');
+    const vizWraith = $('viz-wraith');
+    const vizTwin   = $('viz-twin');
+    const vizApi    = $('viz-api');
+    const counter   = $('viz-counter');
+    const counterVal = $('viz-counter-val');
+
+    let countInterval = null;
+
+    function startCounter(target, ms) {
+      counter.style.display = '';
+      let n = 0;
+      counterVal.textContent = '0';
+      countInterval = setInterval(() => {
+        n++;
+        counterVal.textContent = String(n);
+        if (n >= target) clearInterval(countInterval);
+      }, ms / target);
+    }
+
+    function stopCounter() {
+      if (countInterval) clearInterval(countInterval);
+      counter.style.display = 'none';
+    }
+
+    function resetViz() {
+      document.querySelector('.viz-middle').style.display = 'none';
+      status.textContent = '';
+      status.className = 'viz-status';
+      badge.style.opacity = '0';
+      dots1.className = 'viz-dots';
+      dots2.className = 'viz-dots';
+      edge1.className = 'viz-conn';
+      edge2.className = 'viz-conn';
+      recDot.className = 'viz-indicator';
+      vizCheck.className = 'viz-indicator';
+      vizWraith.style.opacity = '0';
+      vizTwin.style.opacity = '0';
+      vizTwin.className = 'viz-card viz-card-twin';
+      vizApi.style.opacity = '1';
+      vizApi.className = 'viz-card';
+      edge2.style.opacity = '1';
+      stopCounter();
+    }
+
+    // Each step has: cmd, lines (appear one by one), onViz (called before typing)
+    const steps = [
+      {
+        cmd: 'wraith init payments --base-url https://api.example.com',
+        lines: ['<span class="t-ok">initialized</span> payments -> https://api.example.com'],
+        onViz() {
+          // Direct connection: app → api (hide middle, both edges active)
+          document.querySelector('.viz-middle').style.display = 'none';
+          dots1.className = 'viz-dots active';
+          dots2.className = 'viz-dots active';
+          edge1.className = 'viz-conn active';
+          edge2.className = 'viz-conn active';
+          status.textContent = 'Your app talks to the live API...';
+        },
+      },
+      {
+        cmd: 'wraith record payments --port 8080',
+        lines: [
+          '<span class="comment">recording on :8080, proxying to api.example.com...</span>',
+          '<span class="t-str">captured</span> POST /v1/charges <span class="comment">(238ms)</span>',
+          '<span class="t-str">captured</span> GET  /v1/customers/cus_abc <span class="comment">(41ms)</span>',
+          '<span class="t-str">captured</span> POST /v1/payment_intents <span class="comment">(312ms)</span>',
+          '<span class="t-ok">42 interactions recorded</span>',
+        ],
+        onViz() {
+          // Insert wraith as proxy
+          document.querySelector('.viz-middle').style.display = '';
+          vizWraith.style.opacity = '1';
+          dots1.className = 'viz-dots active';
+          dots2.className = 'viz-dots active';
+          edge1.className = 'viz-conn active';
+          edge2.className = 'viz-conn active';
+          recDot.className = 'viz-indicator recording';
+          status.textContent = 'Wraith proxy inserted — recording traffic, scrubbing PII...';
+          status.className = 'viz-status';
+          startCounter(42, 2800);
+        },
+      },
+      {
+        cmd: 'wraith synth payments',
+        lines: [
+          '<span class="comment">synthesizing twin from 42 recordings...</span>',
+          '<span class="t-str">extracted</span> 12 route templates',
+          '<span class="t-str">generated</span> deterministic state machine',
+          '<span class="t-ok">twin ready</span> <span class="comment">(312 rules, 14MB)</span>',
+        ],
+        onViz() {
+          // Stop traffic, synthesize
+          dots1.className = 'viz-dots';
+          dots2.className = 'viz-dots';
+          edge1.className = 'viz-conn';
+          edge2.className = 'viz-conn';
+          recDot.className = 'viz-indicator synth';
+          status.textContent = 'Generating deterministic twin...';
+          stopCounter();
+        },
+      },
+      {
+        cmd: 'wraith check payments --in-memory',
+        lines: [
+          '<span class="comment">replaying 42 recordings against twin...</span>',
+          '<span class="t-ok">42/42 passed</span> | conformance: <span class="t-num">1.000</span>',
+        ],
+        onViz() {
+          // Swap wraith for twin, verify
+          vizWraith.style.opacity = '0';
+          vizTwin.style.opacity = '1';
+          vizCheck.className = 'viz-indicator verified';
+          vizTwin.className = 'viz-card viz-card-twin glow';
+          status.textContent = '100% conformance verified';
+          status.className = 'viz-status ok';
+          badge.style.opacity = '1';
+        },
+      },
+      {
+        cmd: 'wraith serve payments --port 8081',
+        lines: [
+          '<span class="t-ok">twin serving on :8081</span> <span class="comment">(deterministic, stateful)</span>',
+        ],
+        onViz() {
+          // Twin is live, API disconnected
+          dots1.className = 'viz-dots active-green';
+          edge1.className = 'viz-conn active-green';
+          edge2.style.opacity = '0.15';
+          vizApi.style.opacity = '0.2';
+          status.textContent = 'Twin is live — no traffic to live API';
+          status.className = 'viz-status ok';
+        },
+      },
+    ];
+
+    let cursor;
+
+    async function sleep(ms) {
+      return new Promise(r => setTimeout(r, reduced ? 10 : ms));
+    }
+
+    function addPrompt() {
+      const span = document.createElement('span');
+      span.className = 'prompt';
+      span.textContent = '$ ';
+      out.insertBefore(span, cursor);
+    }
+
+    async function typeText(text) {
+      for (const ch of text) {
+        out.insertBefore(document.createTextNode(ch), cursor);
+        await sleep(18 + Math.random() * 25);
+      }
+    }
+
+    function addLine(html) {
+      const span = document.createElement('span');
+      span.innerHTML = html + '\n';
+      span.style.opacity = '0';
+      span.style.transform = 'translateY(4px)';
+      span.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      out.insertBefore(span, cursor);
+      // Trigger reflow then animate in
+      requestAnimationFrame(() => {
+        span.style.opacity = '1';
+        span.style.transform = 'translateY(0)';
+      });
+    }
+
+    function trimOverflow() {
+      const body = out.parentElement;
+      while (out.scrollHeight > body.clientHeight + 40) {
+        if (out.firstChild === cursor) break;
+        out.removeChild(out.firstChild);
+      }
+    }
+
+    async function run() {
+      while (true) {
+        out.innerHTML = '';
+        cursor = document.createElement('span');
+        cursor.className = 'demo-cursor';
+        out.appendChild(cursor);
+        resetViz();
+
+        for (const step of steps) {
+          // Beat before typing
+          await sleep(900);
+          step.onViz();
+          addPrompt();
+          await typeText(step.cmd);
+          await sleep(350);
+          // Newline after command
+          out.insertBefore(document.createTextNode('\n'), cursor);
+          cursor.style.display = 'none';
+          // Staggered line output
+          for (const line of step.lines) {
+            addLine(line);
+            trimOverflow();
+            await sleep(400);
+          }
+          cursor.style.display = '';
+          trimOverflow();
+          await sleep(1600);
+        }
+
+        await sleep(4000);
+      }
+    }
+
+    run();
+  })();
+
+  // Procedural hero background — drifting grid with spectral glow
+  (function() {
+    const canvas = document.getElementById('hero-bg');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h, cols, rows;
+    const cellSize = 40;
+    let time = 0;
+    let raf;
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = rect.width;
+      h = rect.height;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cols = Math.ceil(w / cellSize) + 2;
+      rows = Math.ceil(h / cellSize) + 2;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      time += 0.003;
+      const drift = time * 12;
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(210, 188, 251, 0.08)';
+      ctx.lineWidth = 0.5;
+
+      for (let i = 0; i <= cols; i++) {
+        const x = (i * cellSize) - (drift % cellSize);
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let j = 0; j <= rows; j++) {
+        const y = (j * cellSize) - ((drift * 0.5) % cellSize);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Spectral glow nodes at intersections
+      for (let i = 0; i <= cols; i++) {
+        for (let j = 0; j <= rows; j++) {
+          const x = (i * cellSize) - (drift % cellSize);
+          const y = (j * cellSize) - ((drift * 0.5) % cellSize);
+          const pulse = Math.sin(time * 2 + i * 0.7 + j * 0.5) * 0.5 + 0.5;
+          if (pulse > 0.75) {
+            const r = 1.5 + pulse * 1.5;
+            const a = (pulse - 0.75) * 2;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(210, 188, 251, ${a * 0.5})`;
+            ctx.fill();
+            // glow
+            ctx.beginPath();
+            ctx.arc(x, y, r * 4, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(210, 188, 251, ${a * 0.08})`;
+            ctx.fill();
+          }
+        }
+      }
+
+      raf = requestAnimationFrame(draw);
+    }
+
+    // Only run if not prefers-reduced-motion
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      resize();
+      draw();
+      window.addEventListener('resize', resize);
+    }
+  })();
+</script>
