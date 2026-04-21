@@ -33,6 +33,9 @@ record → synthesize → verify → repair → repeat
 - **serve**: run the twin as a local HTTP server with identical semantics
 - **check**: conformance-score the twin against real API behavior with quantitative divergence reporting
 - **Lua handlers**: fill gaps the synth engine can't infer (computed fields, state machines, cross-entity joins)
+- **simulate**: fault injection, latency, and rate-limit layers turn your twin into a local chaos lab — deterministically, with a shared RNG seed
+- **trace**: ring-buffered request/response log exposed via `/__wraith/trace/*` for post-test inspection
+- **explore**: (optional) seed from OpenAPI — generate scenario plans and measure spec-vs-recording coverage
 
 Current: 18 twins at PASS (REST, GraphQL, gRPC). See [CHANGELOG.md](./CHANGELOG.md).
 
@@ -57,6 +60,13 @@ wraith check myapi --in-memory
 # Serve the twin
 wraith serve myapi --port 8081
 curl http://localhost:8081/...
+
+# Or serve it as a realistic failing/slow/rate-limited service
+wraith serve myapi --port 8081 \
+  --chaos-seed 42 \
+  --latency-mode percentile --latency-p50 80 --latency-p95 400 --latency-p99 1200 \
+  --rate-limit \
+  --trace
 ```
 
 Full documentation at [wraith.cx](https://wraith.cx).

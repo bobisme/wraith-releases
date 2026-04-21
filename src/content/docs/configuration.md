@@ -1,19 +1,22 @@
 ---
 title: Configuration Reference
-description: All wraith.toml and scrub.toml settings
+description: All wraith.toml, scrub.toml, and drift.toml settings
 ---
 
-Wraith uses two TOML files per twin workspace to control behaviour and security policy.
+Wraith uses TOML files per twin workspace to control behaviour, security policy, and drift handling.
 
 ## File Locations
 
 ```
 twins/<name>/
 ├── wraith.toml    # Twin behaviour, thresholds, generation settings
-└── scrub.toml     # Security scrubbing rules
+├── scrub.toml     # Security scrubbing rules
+└── drift.toml     # (optional) Drift suppression / reclassification hints
 ```
 
-Both are created automatically by `wraith init`.
+`wraith.toml` and `scrub.toml` are created automatically by `wraith init`. `drift.toml` is optional; add it only when `wraith check` reports drifts you want to suppress or reclassify.
+
+Runtime simulation (fault injection, latency, rate limiting, tracing) is configured via CLI flags on `wraith serve`, not through `wraith.toml`. See [Simulation](/simulation/) for the full reference.
 
 ---
 
@@ -305,6 +308,64 @@ match = "sk_test_[a-zA-Z0-9]{24}"
 action = "tokenize"
 apply_to = ["header_values", "body"]
 ```
+
+---
+
+## drift.toml
+
+Optional. Lives next to `scrub.toml` at `twins/<name>/drift.toml`. Controls how `wraith check` treats drifts that it classifies in the conformance report.
+
+Every divergence emitted by `wraith check` carries a stable `drift_id` (a fingerprint derived from route + path + category + expected/actual values) and a `drift_type` (e.g. `additive_optional_field`, `field_removed`, `status_code_shift`). `drift.toml` lets you suppress or reclassify drifts by glob-matching any of those fields.
+
+Absent file is a silent no-op. Parse or validation errors are logged as warnings and the check continues.
+
+### `[[suppress]]`
+
+Drop divergences that match the rule from the report. Suppressed drifts are counted separately in `drift_suppressed_count`.
+
+| Field        | Type   | Required | Description                                              |
+|--------------|--------|----------|----------------------------------------------------------|
+| `drift_id`   | string | no       | Match a specific `drift_id` (exact or glob)              |
+| `route`      | string | no       | Route pattern (e.g. `"GET /v1/users/*"`)                 |
+| `path`       | string | no       | JSON path (e.g. `"body.created_at"`)                     |
+| `drift_type` | string | no       | Drift classification (e.g. `"additive_optional_field"`)  |
+| `reason`     | string | yes      | Human-readable explanation                               |
+
+At least one matcher field is required in addition to `reason`.
+
+```toml
+[[suppress]]
+drift_type = "additive_optional_field"
+route = "GET /v1/users/*"
+reason = "backend adds optional fields on schedule; not worth reclassifying"
+
+[[suppress]]
+drift_id = "drift-9f2c4b8e1a3d5f70"
+reason = "known harmless field-order change in search responses"
+```
+
+### `[[reclassify]]`
+
+Change a drift's `drift_type` without suppressing it. The `drift_id` is recomputed from the new classification.
+
+| Field            | Type   | Required | Description                                  |
+|------------------|--------|----------|----------------------------------------------|
+| `match`          | table  | yes      | Same matcher fields as `[[suppress]]`        |
+| `new_drift_type` | string | yes      | Replacement classification                   |
+| `reason`         | string | yes      | Human-readable explanation                   |
+
+```toml
+[[reclassify]]
+match = { route = "POST /v1/jobs", path = "body.status" }
+new_drift_type = "enum_extension"
+reason = "upstream adds new enum values often; not a schema break"
+```
+
+### Pairing with `[[diff.suppress]]` in `wraith.toml`
+
+`[[diff.suppress]]` (in `wraith.toml`) removes divergences before they are classified as drifts. Use it for divergences that are inherent to your twin (placeholder timestamps, generated IDs) and shouldn't be reported at all.
+
+`[[suppress]]` (in `drift.toml`) keeps divergences in the report but suppresses them at the drift layer. Use it when a drift has been reviewed and accepted, but you still want the raw divergence visible in the JSON output.
 
 ---
 

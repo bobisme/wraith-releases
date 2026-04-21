@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.4.0 — 2026-04-21
+
+**Faulty-service simulation + OpenAPI seed + trace endpoints. Six orphan subsystems wired into the CLI.**
+
+### Realistic simulation in `wraith serve`
+
+- **Fault injection** (`--fault-profile <path>`, `--chaos-seed <u64>`): six fault types (Error / Delay / Timeout / Drop / Throttle / Partial), deterministic seeded RNG, route globs, header matching, percentage rolls, per-rule trigger caps.
+- **Latency simulation** (`--latency-mode fixed|uniform|recorded|normal|percentile`): per-route overrides, deterministic ChaCha RNG. Fault `Delay` replaces the latency contribution for that request (no compounding).
+- **Rate-limit simulation** (`--rate-limit`, `--rate-limit-override "METHOD /path=N/Wsec"`): FixedWindow + SlidingWindow, standard `X-RateLimit-*` + `Retry-After` headers. Shared 429-response builder used by both fault Throttle and rate-limit gate.
+- **Evaluation order**: rate-limit → fault → latency → dispatch. All three are opt-in; zero overhead when disabled.
+
+### Trace endpoints (`--trace`)
+
+- `GET /__wraith/trace/log`, `GET /__wraith/trace/<id>`, `POST /__wraith/trace/reset`.
+- Bounded ring buffer, same control-plane auth as the rest of `/__wraith/*`.
+
+### Drift classification in `wraith check`
+
+- Stable `drift_id` + `DriftType` per divergence. JSON envelope adds `drifts[]` summary (additive only).
+- `twins/<name>/drift.toml` for `[[suppress]]` + `[[reclassify]]` hints matched by glob.
+
+### OpenAPI seed mode
+
+- New `wraith explore --from-openapi <spec.yaml> [--against <url>]`: parses OpenAPI 3.x, generates scenarios, optionally executes against a live URL.
+- `wraith coverage --openapi <spec>` reports spec-vs-recordings gaps.
+
+### Bug fixes
+
+Router backtracking, scrub null handling, x-* header allowlist, sync conformance query-params, VCR base64 case, async CRUD error short-circuit, async/sync CRUD divergence eliminated (-561 LOC), clock holes carry unit info.
+
+### Stats
+
+1991 lib tests passing (+43 vs v0.3.0). 40+ new integration tests.
+
+---
+
 ## v0.3.0 — 2026-03-30
 
 **18 twins (REST + GraphQL + gRPC). All PASS. Honest conformance with granular suppression.**

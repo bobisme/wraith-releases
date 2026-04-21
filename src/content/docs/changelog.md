@@ -3,6 +3,58 @@ title: Changelog
 description: Release notes and conformance progress
 ---
 
+## v0.4.0 -- 2026-04-21
+
+**Faulty-service simulation + OpenAPI seed + trace endpoints. Six orphan subsystems wired into the CLI.**
+
+See the [Simulation](/simulation/) guide for the fault/latency/rate-limit story end to end.
+
+### Realistic simulation in `wraith serve`
+
+- **Fault injection** (`--fault-profile <path>`, `--chaos-seed <u64>`): six fault types (Error / Delay / Timeout / Drop / Throttle / Partial), deterministic seeded RNG, route globs, header matching, percentage rolls, per-rule trigger caps. `generate_chaos_profile` builds a realistic mix from the loaded WIR when given just a seed.
+- **Latency simulation** (`--latency-mode <fixed|uniform|recorded|normal|percentile>` + aux flags): per-route overrides, seeded ChaCha RNG for deterministic replay. When a fault `Delay` rule fires, it replaces the latency simulator's contribution for that request (no compounding).
+- **Rate-limit simulation** (`--rate-limit`, `--rate-limit-override "METHOD /path=N/Wsec"`): FixedWindow and SlidingWindow algorithms, standard `X-RateLimit-*` + `Retry-After` headers, shared 429-response builder used by both fault `Throttle` and the rate-limit gate.
+- **Evaluation order**: rate-limit -> fault -> latency -> dispatch. All three layers are `Option<Arc<...>>` -- zero overhead when their flags are absent.
+
+### Trace endpoints (`--trace [--trace-capacity N]`)
+
+- `GET /__wraith/trace/log` returns the ring buffer in reverse-chronological order.
+- `GET /__wraith/trace/<id>` fetches a single trace by id.
+- `POST /__wraith/trace/reset` clears the buffer.
+- Bounded ring buffer with FIFO eviction. Same control-plane auth policy as the existing `/__wraith/*` surface. Disabled by default.
+
+### Drift classification in `wraith check`
+
+- Each divergence gets a stable `drift_id` (fingerprint) and a `DriftType` classification (schema-change / field-removed / status-shift / etc.).
+- JSON envelope adds a `drifts[]` summary grouping divergences by `drift_id`, and per-divergence `drift_id` + `drift_type`. Additive only -- existing consumers see the old shape when `skip_serializing_if` suppresses empty fields.
+- `twins/<name>/drift.toml` (sibling of `scrub.toml`) supports `[[suppress]]` and `[[reclassify]]` rules matched by glob on `drift_id` / `route` / `path` / `drift_type`. Absent file is a silent no-op.
+- Refresh integration deferred until refresh's probe-execution path lands.
+
+### OpenAPI seed mode
+
+- New `wraith explore --from-openapi <spec.yaml> [--against <url>]`: parses OpenAPI 3.x (YAML or JSON), generates scenario plans, optionally executes them against a live URL and reports per-step match/mismatch/error counts. Auth via repeated `--header` flags.
+- `wraith coverage --openapi <spec>` extends coverage to report spec-vs-recordings gaps (`covered_count`, `total_count`, `uncovered_operations`).
+- Additive JSON envelope fields -- no breaking changes to existing coverage consumers.
+
+### Post-v0.3.0 bug-hunt round
+
+- **Router backtracking**: literal subtrees with wrong-method no longer block backtracking to param subtrees.
+- **Scrub null handling**: null JSON values no longer get tokenized.
+- **Header allowlist**: user `with_extra_compare_headers` opt-ins no longer overridden by blanket x-* filter.
+- **Sync conformance replay**: query params now carried through.
+- **VCR base64 handling**: case-insensitive `base64` detection.
+- **Async CRUD handlers**: error-variant short-circuit restored across Update / Delete.
+- **Async `handle_list`**: array-key detection + totalItems / totalPages parity with sync path.
+- **Async/sync drift eliminated**: async CRUD handlers now delegate to sync `dispatch` (-561 LOC of duplicate logic).
+- **Clock holes carry unit info**: `ClockUnit::{EpochSec, EpochMs, IsoString}` with serde-compatible migration.
+
+### Stats
+
+- **1991 lib tests passing** (+43 vs v0.3.0). 40+ new integration tests across `e2e_fault`, `e2e_latency`, `e2e_rate_limit`, `e2e_serve` trace suite, `explore_openapi`.
+- `cli/up.rs`, `cli/refresh.rs`, synth-side rate-limit / latency auto-population remain TODO for v0.4.x or v0.5.
+
+---
+
 ## v0.3.0 -- 2026-03-30
 
 **18 twins (REST + GraphQL + gRPC). All PASS. Honest conformance with granular suppression.**
