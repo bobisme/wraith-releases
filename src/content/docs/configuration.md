@@ -40,7 +40,7 @@ Both are created automatically by `wraith init`.
 |--------------------|--------|------------|--------------------------------------------------|
 | `port`             | u16    | `8081`     | Port the twin server binds to                    |
 | `session_mode`     | string | `"header"` | Session isolation: `header`, `cookie`, or `path` |
-| `fidelity`         | string | `"synth"`  | Response mode: `strict`, `synth`, `permissive`   |
+| `fidelity`         | string | `"synth"`  | Response mode: `strict` or `synth` (`permissive` is reserved, not yet implemented) |
 | `deterministic_seed` | u64  | `42`       | Seed for deterministic random generation         |
 | `debug`            | bool   | `false`    | Enable debug response headers                    |
 

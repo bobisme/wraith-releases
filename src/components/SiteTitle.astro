@@ -1,0 +1,64 @@
+---
+// Custom site title — italic serif "wraith" with luminous cyan tittle over the 'i'.
+// Replaces Starlight's default logo/title.
+---
+<a href="/" class="site-title" aria-label="wraith">
+  <span class="wm">wra<span class="i">i</span>th</span>
+  <span class="slash">/</span>
+  <span class="sub">docs</span>
+</a>
+
+<style>
+  .site-title {
+    display: inline-flex;
+    align-items: baseline;
+    text-decoration: none;
+    color: var(--sl-color-white);
+    line-height: 1;
+  }
+  .wm {
+    font-family: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.55rem;
+    letter-spacing: -0.02em;
+    color: var(--sl-color-white);
+    position: relative;
+  }
+  .wm .i { position: relative; display: inline-block; }
+  .wm .i::after {
+    content: '';
+    position: absolute;
+    top: 0.16em;
+    left: 50%;
+    width: 0.125em;
+    height: 0.125em;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    background: #7df9ff;
+    box-shadow: 0 0 0.32em #7df9ff, 0 0 0.58em rgba(125, 249, 255, 0.5);
+    animation: wm-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes wm-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .slash {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-style: normal;
+    color: #454f5e;
+    margin: 0 0.5rem;
+    font-size: 0.95rem;
+  }
+  .sub {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-style: normal;
+    font-size: 0.8rem;
+    color: #9ba6b6;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 640px) {
+    .slash, .sub { display: none; }
+  }
+</style>

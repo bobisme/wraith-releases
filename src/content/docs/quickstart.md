@@ -7,14 +7,8 @@ Record real API traffic, synthesize a deterministic local twin, and verify confo
 
 ## Prerequisites
 
-- Rust 1.85+ (install via [rustup](https://rustup.rs/))
+- A wraith binary on your `PATH` — see [Installation](/installation/)
 - Access to the API you want to twin
-
-## Install
-
-```sh
-cargo install --path crates/wraith
-```
 
 ## The full loop in 5 commands
 
@@ -24,7 +18,7 @@ wraith record github-actions --port 8080    # proxy traffic through wraith
 # ... exercise the API endpoints ...
 wraith synth github-actions                 # build the twin model
 wraith check github-actions --in-memory     # verify conformance
-wraith serve github-actions --port 8080     # serve the twin
+wraith serve github-actions --port 8081     # serve the twin
 ```
 
 Your tests now hit the twin instead of the real API: local, deterministic, millisecond responses.
@@ -136,10 +130,10 @@ Exit code 0 = pass, exit code 2 = conformance threshold not met.
 ### 5. Serve the twin
 
 ```sh
-wraith serve myapi --port 8080
+wraith serve myapi --port 8081
 ```
 
-Your twin is now an HTTP server. Point your test suite at `http://localhost:8080` instead of the real API.
+Your twin is now an HTTP server. Point your test suite at `http://localhost:8081` instead of the real API. (Use a different port from the recording proxy so the two can coexist.)
 
 The twin:
 - Serves JSON responses matching the real API's structure
@@ -149,8 +143,8 @@ The twin:
 
 ```sh
 # Your tests now run against the twin
-curl http://localhost:8080/v1/customers
-curl -X POST http://localhost:8080/v1/customers -d '{"name": "Test"}'
+curl http://localhost:8081/v1/customers
+curl -X POST http://localhost:8081/v1/customers -d '{"name": "Test"}'
 ```
 
 ## Fidelity modes
@@ -168,8 +162,8 @@ For APIs that require authentication (GitHub, Stripe, Cloudflare, etc.):
 
 1. Set your API key in the environment
 2. Your exercise script passes auth headers through the proxy
-3. Wraith forwards them to the real API during recording
-4. The twin ignores auth headers during serving (it's local)
+3. Wraith forwards them to the real API during recording (and scrubs them before writing to disk)
+4. The twin does not validate auth headers when serving — it's local
 
 ```sh
 export GITHUB_TOKEN=ghp_xxx
@@ -178,10 +172,12 @@ wraith record github --port 8080 &
 curl http://localhost:8080/user -H "Authorization: token $GITHUB_TOKEN"
 kill %1
 wraith synth github
-wraith serve github --port 8080
-# Now auth headers are ignored -- the twin serves to anyone
-curl http://localhost:8080/user
+wraith serve github --port 8081
+# The twin does not check auth — any request that matches a route gets the stored response
+curl http://localhost:8081/user
 ```
+
+If your tests rely on getting `401` for a bad token, model that explicitly — either record the 401 exchange so it becomes a variant, or write a small Lua handler.
 
 ## Exercise scripts
 
@@ -190,15 +186,16 @@ For best results, write a Python script that exercises the API endpoints you nee
 ```python
 #!/usr/bin/env python3
 """Exercise script for myapi."""
-import json, random, urllib.request
+import json, os, random, urllib.request
 
 BASE = "http://localhost:8080"
+TOKEN = os.environ["MYAPI_TOKEN"]
 
 def post(path, body):
     req = urllib.request.Request(
         f"{BASE}{path}",
         json.dumps(body).encode(),
-        {"Content-Type": "application/json", "Authorization": "Bearer $TOKEN"},
+        {"Content-Type": "application/json", "Authorization": f"Bearer {TOKEN}"},
     )
     with urllib.request.urlopen(req) as resp:
         return resp.status, json.loads(resp.read())

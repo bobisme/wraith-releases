@@ -1,242 +1,448 @@
-/* Spectral Engineering Design System for wraith.cx */
-/* Fonts: Space Grotesk (headers/labels) + Inter (body) */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
+/* =======================================================
+   wraith — docs theme
+   Ghostly-technical: cool near-black, spectral cyan→violet,
+   Instrument Serif headings, JetBrains Mono for code/labels.
+   ======================================================= */
 
-/* ============================================================
-   Design Tokens — Starlight CSS custom property overrides
-   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+/* =======================================================
+   Design tokens + Starlight overrides
+   ======================================================= */
 :root {
-  /* Disable light mode entirely */
   color-scheme: dark;
+
+  /* wraith tokens (mirrors Landing.astro layout) */
+  --w-bg: #07090c;
+  --w-bg-1: #0b0e13;
+  --w-bg-2: #11151c;
+  --w-bg-3: #171c25;
+  --w-line: #1f2632;
+  --w-line-2: #2a3240;
+  --w-line-bright: #3a4456;
+
+  --w-ink: #e7ecf3;
+  --w-ink-dim: #9ba6b6;
+  --w-ink-mute: #6b7789;
+  --w-ink-faint: #454f5e;
+
+  --w-ghost: #7df9ff;
+  --w-ghost-2: #a78bfa;
+  --w-ghost-3: #5eead4;
+  --w-warn: #f6b861;
+  --w-danger: #f87171;
+
+  --w-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --w-font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --w-font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
 }
 
 :root,
 [data-theme='dark'] {
   /* Surface architecture */
-  --sl-color-bg: #131313;
-  --sl-color-bg-nav: #0e0e0eee;
-  --sl-color-bg-sidebar: #131313;
-  --sl-color-bg-inline-code: #1c1b1b;
+  --sl-color-bg: var(--w-bg);
+  --sl-color-bg-nav: rgba(7, 9, 12, 0.75);
+  --sl-color-bg-sidebar: var(--w-bg);
+  --sl-color-bg-inline-code: var(--w-bg-2);
 
-  /* Accent — spectral violet */
-  --sl-color-accent-low: #1a1525;
-  --sl-color-accent: #d2bcfb;
-  --sl-color-accent-high: #ede6ff;
+  /* Accent — luminous cyan */
+  --sl-color-accent-low: #0c2233;
+  --sl-color-accent: #7df9ff;
+  --sl-color-accent-high: #b0fbff;
 
   /* Text tokens */
-  --sl-color-white: #ededed;
-  --sl-color-gray-1: #d4d4d4;
-  --sl-color-gray-2: #a3a3a3;
-  --sl-color-gray-3: #737373;
-  --sl-color-gray-4: #49454f;
-  --sl-color-gray-5: #2a2a2a;
-  --sl-color-gray-6: #1c1b1b;
-  --sl-color-gray-7: #0e0e0e;
-  --sl-color-black: #0a0a0a;
+  --sl-color-white: #e7ecf3;
+  --sl-color-gray-1: #cfd6df;
+  --sl-color-gray-2: #9ba6b6;
+  --sl-color-gray-3: #6b7789;
+  --sl-color-gray-4: #454f5e;
+  --sl-color-gray-5: #2a3240;
+  --sl-color-gray-6: #171c25;
+  --sl-color-gray-7: #11151c;
+  --sl-color-black: #07090c;
 
-  /* Text colors */
-  --sl-color-text: #d4d4d4;
-  --sl-color-text-accent: #d2bcfb;
+  --sl-color-text: #cfd6df;
+  --sl-color-text-accent: #7df9ff;
 
   /* Typography */
-  --sl-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --sl-font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --sl-font: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --sl-font-mono: var(--w-font-mono);
 
-  /* 0px border radius — brutalist */
-  --sl-border-radius: 0px;
+  /* 2px border radius */
+  --sl-border-radius: 2px;
 
-  /* No borders — tonal shifts only */
-  --sl-color-hairline: transparent;
-  --sl-color-hairline-shade: transparent;
-  --sl-color-hairline-light: transparent;
+  /* Hairlines */
+  --sl-color-hairline: var(--w-line);
+  --sl-color-hairline-shade: var(--w-line);
+  --sl-color-hairline-light: var(--w-line-2);
 }
 
-/* ============================================================
-   Global overrides
-   ============================================================ */
+/* =======================================================
+   Base
+   ======================================================= */
+html, body {
+  background: var(--w-bg);
+  color: var(--sl-color-text);
+  font-family: var(--sl-font);
+}
 
-/* Force dark background on body */
-html,
 body {
-  background: #131313;
-  color: #d4d4d4;
+  position: relative;
 }
 
-/* Headers use Space Grotesk */
+/* Faint grid wash */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 40%, transparent 85%);
+}
+
+::selection { background: rgba(125, 249, 255, 0.25); color: #fff; }
+
+/* Headings — Instrument Serif editorial treatment */
 h1, h2, h3, h4, h5, h6,
 .sl-markdown-content h1,
 .sl-markdown-content h2,
 .sl-markdown-content h3,
 .sl-markdown-content h4 {
-  font-family: 'Space Grotesk', var(--sl-font);
+  font-family: var(--w-font-serif);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  color: var(--w-ink);
+}
+
+.sl-markdown-content h1 {
+  font-size: 2.75rem;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+.sl-markdown-content h2 {
+  font-size: 1.9rem;
+  line-height: 1.15;
+  margin-top: 3.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--w-line);
+}
+.sl-markdown-content h3 {
+  font-family: var(--w-font-sans);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 1.125rem;
+  letter-spacing: -0.005em;
+  margin-top: 2rem;
 }
 
-/* ============================================================
-   Navigation
-   ============================================================ */
+.sl-markdown-content h2 em,
+.sl-markdown-content h1 em {
+  font-style: italic;
+  color: var(--w-ghost);
+}
 
-/* Nav bar — glass effect with backdrop blur */
-starlight-header,
+/* Body copy */
+.sl-markdown-content {
+  font-family: var(--sl-font);
+  line-height: 1.65;
+}
+.sl-markdown-content p {
+  color: var(--w-ink-dim);
+}
+.sl-markdown-content strong { color: var(--w-ink); font-weight: 500; }
+
+/* Inline code */
+.sl-markdown-content :not(pre) > code {
+  font-family: var(--w-font-mono);
+  font-size: 0.88em;
+  padding: 2px 6px;
+  background: var(--w-bg-2);
+  border: 1px solid var(--w-line);
+  border-radius: 2px;
+  color: var(--w-ghost);
+}
+
+/* Links inside content */
+.sl-markdown-content a {
+  color: var(--w-ghost);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(125, 249, 255, 0.3);
+  transition: border-color 0.2s;
+}
+.sl-markdown-content a:hover { border-bottom-color: var(--w-ghost); }
+
+/* Lists */
+.sl-markdown-content ul li,
+.sl-markdown-content ol li {
+  color: var(--w-ink-dim);
+}
+.sl-markdown-content ul li::marker { color: var(--w-ghost); }
+
+/* =======================================================
+   Nav header
+   ======================================================= */
 header.header {
-  background: #0e0e0eee !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: none !important;
+  background: rgba(7, 9, 12, 0.75) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--w-line) !important;
 }
 
-/* Site title styling */
 .site-title {
-  font-family: 'Space Grotesk', var(--sl-font) !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em;
-  text-transform: lowercase;
+  text-decoration: none;
 }
 
-/* Sidebar — no border, tonal shift */
+/* =======================================================
+   Sidebar
+   ======================================================= */
 .sidebar-pane {
-  background: #131313;
-  border-right: none !important;
+  background: var(--w-bg) !important;
+  border-right: 1px solid var(--w-line) !important;
+}
+
+nav.sidebar {
+  padding-top: 1rem;
+}
+
+nav.sidebar-content summary,
+nav.sidebar-content .group-label,
+nav.sidebar a {
+  font-family: var(--w-font-mono);
+}
+
+nav.sidebar-content .group-label span,
+nav.sidebar-content summary span,
+nav.sidebar summary {
+  font-family: var(--w-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--w-ink-faint);
+  font-weight: 500;
+}
+
+nav.sidebar ul.top-level > li + li {
+  margin-top: 1.2rem;
 }
 
 nav.sidebar a {
+  font-family: var(--w-font-mono);
+  font-size: 13px;
+  color: var(--w-ink-dim);
+  border-left: 1px solid transparent;
   border-radius: 0 !important;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
-
+nav.sidebar a:hover {
+  color: var(--w-ink);
+  border-left-color: var(--w-line-bright);
+  background: transparent;
+}
 nav.sidebar a[aria-current='page'],
 nav.sidebar a[aria-current='page']:hover {
-  background: #1c1b1b;
-  border-left: 2px solid #d2bcfb;
+  background: linear-gradient(90deg, rgba(125, 249, 255, 0.05), transparent 70%);
+  border-left: 1px solid var(--w-ghost);
+  color: var(--w-ghost) !important;
   border-radius: 0;
-  color: #ededed !important;
 }
 
-/* ============================================================
-   Code blocks — hero component
-   ============================================================ */
+/* =======================================================
+   Right TOC
+   ======================================================= */
+starlight-toc nav > h2 {
+  font-family: var(--w-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--w-ink-faint);
+  font-weight: 500;
+}
+starlight-toc a {
+  font-family: var(--w-font-mono);
+  font-size: 12px;
+  color: var(--w-ink-mute);
+  border-radius: 0 !important;
+}
+starlight-toc a:hover,
+starlight-toc a[aria-current='true'] {
+  color: var(--w-ghost);
+  background: transparent;
+}
 
-/* No window chrome, dark background */
+/* =======================================================
+   Code blocks
+   ======================================================= */
 pre,
 .expressive-code pre,
 .expressive-code .frame {
-  background: #0e0e0e !important;
-  border: none !important;
-  border-radius: 0 !important;
+  background: var(--w-bg-1) !important;
+  border: 1px solid var(--w-line) !important;
+  border-radius: 4px !important;
   box-shadow: none !important;
 }
 
-.expressive-code .frame::before,
-.expressive-code .header {
-  display: none !important;
-}
-
 .expressive-code {
-  --ec-codeBg: #0e0e0e;
-  --ec-codeFont: 'JetBrains Mono', 'Fira Code', monospace;
-  --ec-codeFontSize: 0.875rem;
-  --ec-brdRad: 0;
-  --ec-brdCol: transparent;
+  --ec-codeBg: #0b0e13;
+  --ec-codeFont: var(--w-font-mono);
+  --ec-codeFontSize: 0.8125rem;
+  --ec-brdRad: 4px;
+  --ec-brdCol: #1f2632;
   --ec-frm-frameBoxShdCssVal: none;
+  --ec-frm-edTabBarBg: #11151c;
+  --ec-frm-edTabBarBrdBtmCol: #1f2632;
+  --ec-frm-edActTabBg: #0b0e13;
+  --ec-frm-trmTtbBg: #11151c;
+  --ec-frm-trmTtbBrdBtmCol: #1f2632;
 }
 
-code {
-  border-radius: 0 !important;
+.expressive-code .copy button {
+  border-radius: 2px !important;
 }
 
-/* ============================================================
-   Components — 0px radius everywhere
-   ============================================================ */
-
-/* All buttons */
-a, button, .sl-link-button {
-  border-radius: 0 !important;
+/* =======================================================
+   Tables
+   ======================================================= */
+.sl-markdown-content table {
+  border: 1px solid var(--w-line);
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-family: var(--w-font-mono);
+  font-size: 13px;
+  width: 100%;
 }
-
-/* Cards */
-.card, .sl-card {
-  border-radius: 0 !important;
-  border: none !important;
-  background: #1c1b1b;
+.sl-markdown-content table th,
+.sl-markdown-content table td {
+  border-bottom: 1px solid var(--w-line);
+  border-right: none;
+  padding: 12px 16px;
+  text-align: left;
 }
-
-/* Tables */
-table {
-  border-radius: 0;
-}
-
-th {
-  background: #1c1b1b;
-  font-family: 'Space Grotesk', var(--sl-font);
-  font-weight: 600;
+.sl-markdown-content table th {
+  font-family: var(--w-font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
+  color: var(--w-ink-mute);
+  background: var(--w-bg-2);
+}
+.sl-markdown-content table td { color: var(--w-ink-dim); }
+.sl-markdown-content table tr:last-child td { border-bottom: 0; }
+
+/* =======================================================
+   Callouts / asides
+   ======================================================= */
+.sl-markdown-content .starlight-aside {
+  background: var(--w-bg-1);
+  border: 1px solid var(--w-line);
+  border-left: 2px solid var(--w-ghost);
+  border-radius: 2px;
+  padding: 16px 20px;
+}
+.sl-markdown-content .starlight-aside--tip { border-left-color: var(--w-ghost-3); }
+.sl-markdown-content .starlight-aside--caution { border-left-color: var(--w-warn); }
+.sl-markdown-content .starlight-aside--danger { border-left-color: var(--w-danger); }
+
+.sl-markdown-content .starlight-aside__title {
+  font-family: var(--w-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--w-ghost);
 }
 
-td, th {
-  border-color: #2a2a2a !important;
+/* =======================================================
+   Pagination
+   ======================================================= */
+.pagination-links {
+  gap: 1px;
+  background: var(--w-line);
+  border: 1px solid var(--w-line);
+  border-radius: 4px;
+  overflow: hidden;
 }
-
-/* ============================================================
-   Starlight content area
-   ============================================================ */
-
-.sl-markdown-content {
-  font-family: 'Inter', var(--sl-font);
-}
-
-/* Remove any remaining rounded corners from Starlight */
-* {
-  --sl-border-radius: 0px;
-}
-
-/* Pagination links */
 .pagination-links a {
-  border: 1px solid #2a2a2a !important;
+  border: none !important;
   border-radius: 0 !important;
-  background: #1c1b1b;
+  background: var(--w-bg-1);
+  font-family: var(--w-font-mono);
+  font-size: 13px;
+  color: var(--w-ink-dim);
+  padding: 20px 24px;
+  transition: background 0.2s;
 }
-
 .pagination-links a:hover {
-  background: #2a2a2a;
-  border-color: #d2bcfb !important;
+  background: var(--w-bg-2);
+  color: var(--w-ink);
+}
+.pagination-links a .link-title {
+  color: var(--w-ink);
 }
 
-/* TOC */
-starlight-toc a {
-  border-radius: 0 !important;
+/* =======================================================
+   Cards (starlight's <Card> component)
+   ======================================================= */
+.sl-card, .card {
+  background: var(--w-bg-1) !important;
+  border: 1px solid var(--w-line) !important;
+  border-radius: 4px !important;
 }
 
-/* Search */
-site-search button {
-  border-radius: 0 !important;
+/* =======================================================
+   Buttons (sl-link-button, etc.)
+   ======================================================= */
+.sl-link-button {
+  font-family: var(--w-font-mono);
+  border-radius: 2px !important;
 }
 
-/* ============================================================
-   Scrollbar
-   ============================================================ */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0e0e0e;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
-  border-radius: 0;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #49454f;
-}
-
-/* ============================================================
+/* =======================================================
    Footer
-   ============================================================ */
+   ======================================================= */
 .page-footer {
-  border-top: none !important;
+  border-top: 1px solid var(--w-line) !important;
+  color: var(--w-ink-faint);
+  font-family: var(--w-font-mono);
+  font-size: 11px;
+}
+
+/* =======================================================
+   Scrollbar
+   ======================================================= */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--w-bg); }
+::-webkit-scrollbar-thumb {
+  background: var(--w-line-2);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--w-line-bright); }
+
+/* =======================================================
+   Search
+   ======================================================= */
+site-search button {
+  font-family: var(--w-font-mono);
+  background: var(--w-bg-2);
+  border: 1px solid var(--w-line);
+  border-radius: 2px !important;
+  color: var(--w-ink-mute);
+}
+site-search button:hover {
+  border-color: var(--w-ghost);
+  color: var(--w-ghost);
+}
+
+/* =======================================================
+   Lede paragraph after h1 (first paragraph styled large)
+   ======================================================= */
+.sl-markdown-content h1 + p {
+  font-family: var(--w-font-serif);
+  font-size: 1.375rem;
+  line-height: 1.45;
+  color: var(--w-ink-dim);
+  margin-bottom: 2.5rem;
+  max-width: 58ch;
 }

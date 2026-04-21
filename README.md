@@ -2,7 +2,7 @@
 
 **Agent-accelerated API digital twin platform.**
 
-Record any API. Run a verified local twin. Zero flaky tests.
+Record any API. Run a verified local twin. Develop against it — fast, correct, local.
 
 ```
 wraith init stripe --base-url https://api.stripe.com
@@ -15,21 +15,10 @@ Your integration tests now run locally, deterministically, with quantitative pro
 
 ## Install
 
-### macOS / Linux (Homebrew)
-
-```bash
-brew install bobisme/tap/wraith
-```
-
-### macOS / Linux (curl)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/bobisme/wraith-releases/main/install.sh | sh
-```
-
-### Manual
-
-Grab the archive for your platform from [Releases](https://github.com/bobisme/wraith-releases/releases/latest), extract, place `wraith` on your PATH.
+Wraith is in private beta. Packaged installers (Homebrew tap, curl installer,
+GitHub release tarballs) are planned but not yet live. For now, contact the
+maintainer directly or build from source. See [Installation](https://wraith.cx/installation/)
+for details.
 
 ## What wraith does
 

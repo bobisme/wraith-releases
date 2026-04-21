@@ -6,13 +6,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'wraith',
-      social: [
-        {
-          icon: 'github',
-          label: 'GitHub',
-          href: 'https://github.com/bobisme/wraith-releases',
-        },
-      ],
+      favicon: '/favicon.svg',
       sidebar: [
         {
           label: 'Getting Started',
@@ -45,6 +39,7 @@ export default defineConfig({
       disable404Route: false,
       components: {
         ThemeSelect: './src/components/ThemeSelect.astro',
+        SiteTitle: './src/components/SiteTitle.astro',
       },
     }),
   ],

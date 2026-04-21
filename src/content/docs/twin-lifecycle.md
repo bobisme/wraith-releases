@@ -171,7 +171,7 @@ If a suppressed field matters to you, force comparison in `wraith.toml`:
 "customer_name" = { classify = "constant" }
 ```
 
-Valid classifications: `"generated"`, `"timestamp"`, `"constant"`, `"echoed"`.
+Valid classifications: `"generated"`, `"timestamp"`, `"constant"`, `"echoed"`, `"enum"` (use with a `values` list).
 
 ## 4. Generate (LLM-assisted repair)
 
@@ -198,9 +198,10 @@ wraith generate stripe --provider openrouter --model anthropic/claude-sonnet  # 
 
 The regression guard ensures no fix makes things worse -- both per-route and globally.
 
-## 5. Lua handlers (last-mile escape hatch)
+## 5. Lua handlers
 
-The synth engine handles CRUD patterns deterministically. But some responses require logic the engine can't express:
+Lua handlers are a first-class extension point for responses the deterministic
+engine can't express. Drop into Lua when you need:
 
 - **Computed fields**: totals, averages, aggregates derived from state
 - **Conditional shapes**: fields present only under certain conditions
@@ -208,7 +209,9 @@ The synth engine handles CRUD patterns deterministically. But some responses req
 - **State machine validation**: only certain transitions are valid
 - **Custom formatting**: non-standard date formats, encoded cursors
 
-For these, write Lua handlers.
+If a Lua handler fails (compile error, runtime error, timeout), the synth engine
+takes over as fallback — Lua never breaks the twin, so it's safe to layer on
+incrementally.
 
 ### Directory layout
 

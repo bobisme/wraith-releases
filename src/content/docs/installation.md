@@ -1,44 +1,46 @@
 ---
 title: Installation
-description: Install wraith via Homebrew, curl, or manual download
+description: How to get a wraith binary
 ---
 
-## Homebrew (macOS / Linux)
+:::note[Private beta]
+Wraith is in private beta. Packaged installers are not yet published. To get
+a binary, contact the maintainer directly or build from source.
+:::
+
+## Build from source
+
+Wraith is a single Rust binary with no runtime dependencies.
 
 ```sh
-brew install bobisme/tap/wraith
+git clone <private-repo-url> wraith
+cd wraith
+cargo build --release
+./target/release/wraith --version
 ```
 
-## curl (macOS / Linux)
+Move the binary somewhere on your `PATH`:
 
 ```sh
-curl -fsSL https://wraith.cx/install.sh | sh
+install -m 0755 target/release/wraith ~/.local/bin/wraith
 ```
 
-The installer detects your OS and architecture, downloads the latest release from GitHub, verifies the SHA-256 checksum, and installs to `/usr/local/bin` (or `~/.local/bin` if `/usr/local/bin` is not writable).
+Requirements for building:
 
-Override the install directory:
+- Rust 1.85+ (install via [rustup](https://rustup.rs/))
+- A C toolchain (for `zstd` and `ring`)
 
-```sh
-WRAITH_INSTALL_DIR=~/bin curl -fsSL https://wraith.cx/install.sh | sh
-```
+## Coming soon
 
-## Manual download
+These channels are planned for the public release and are **not live yet**:
 
-Download the latest release archive from [GitHub Releases](https://github.com/bobisme/wraith-releases/releases).
+- **Homebrew tap** — `brew install bobisme/tap/wraith`
+- **curl installer** — `curl -fsSL https://wraith.cx/install.sh | sh`
+- **GitHub Releases** — prebuilt tarballs for Linux and macOS (x86_64, aarch64)
 
-Available targets:
-- `wraith-<version>-x86_64-unknown-linux-gnu.tar.gz`
-- `wraith-<version>-aarch64-unknown-linux-gnu.tar.gz`
-- `wraith-<version>-x86_64-apple-darwin.tar.gz`
-- `wraith-<version>-aarch64-apple-darwin.tar.gz`
-
-Extract and move the binary:
-
-```sh
-tar -xzf wraith-*.tar.gz
-sudo install -m 0755 wraith /usr/local/bin/wraith
-```
+If you land on this page from an external link expecting any of the above to
+work, please [open an issue](https://github.com/bobisme/wraith-releases/issues)
+so we can fix the link.
 
 ## Verify
 
@@ -46,10 +48,10 @@ sudo install -m 0755 wraith /usr/local/bin/wraith
 wraith --version
 ```
 
-## Requirements
+## Runtime requirements
 
 - **OS**: macOS (x86_64, ARM64) or Linux (x86_64, ARM64)
-- **Runtime dependencies**: none -- wraith is a single static binary
+- **Runtime dependencies**: none — wraith is a single static binary
 - **Recording**: access to the upstream API you want to twin
 - **LLM-assisted repair** (optional): local model via ollama, or cloud provider API key
 

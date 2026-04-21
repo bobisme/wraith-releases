@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 30" width="152" height="30">
+  <text x="0" y="23"
+        font-family="Instrument Serif, Georgia, 'Times New Roman', serif"
+        font-style="italic"
+        font-size="26"
+        font-weight="400"
+        fill="#e7ecf3"
+        letter-spacing="-0.5">wraith</text>
+  <circle cx="68" cy="9" r="2.4" fill="#7df9ff">
+    <animate attributeName="opacity" values="1;0.55;1" dur="2.4s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="68" cy="9" r="4.5" fill="#7df9ff" opacity="0.25">
+    <animate attributeName="opacity" values="0.25;0.1;0.25" dur="2.4s" repeatCount="indefinite"/>
+  </circle>
+</svg>
