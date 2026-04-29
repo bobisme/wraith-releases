@@ -5,57 +5,41 @@ description: Release notes and conformance progress
 
 ## v0.5.0 -- 2026-04-29
 
-**Streaming protocols ship. SSE and gRPC server-streaming work end-to-end: record, synthesize, serve, conformance-check.**
+**SSE and gRPC server-streaming.** Record, synthesize, serve, and conformance-check streaming APIs end to end. See the [Streaming](/streaming/) guide.
 
-See the [Streaming](/streaming/) guide for the full story.
+### Streaming protocols
 
-### SSE streaming
+- **SSE** (`text/event-stream`): `wraith record` captures live without buffering -- long-lived streams no longer deadlock the recorder. `wraith serve` emits realistic streams with per-event timing and rotating per-event content (an LLM twin emits the recorded token sequence, not one repeated character).
+- **gRPC server-streaming**: `wraith record` forwards frames live with HTTP/2 trailers preserved. `wraith serve` emits frame-correct length-prefixed protobuf with `grpc-status` trailers -- gRPC clients connect and stream without `Internal: missing trailers`.
+- Long-lived bidi streams (cancelled by client deadline, no trailers received) classify as truncated; replay matches.
 
-- **Capture**: tee'd live-forwarding pipeline. The proxy emits each `text/event-stream` chunk to the downstream client as it arrives from upstream and finalizes the WREC asynchronously when the stream ends. Long-lived streams (Wikipedia EventStream, infinite Mercure feeds) no longer deadlock waiting for a `collect().await` that never completes.
-- **Synthesis**: per-event anti-unification with prefix / variable-middle / suffix decomposition. Suffix detection catches fixed-position-from-end events like the OpenAI `[DONE]` sentinel and the trailing `finish_reason` chunk.
-- **Serve**: per-event timing replayed within the recorded p99 band; per-event hole values rotate through observed examples (an LLM twin emits the recorded token sequence, not one repeated character).
-- **Reciprocal `{raw: <str>}` wrapping**: capture wraps non-JSON `data:` payloads as `{"raw": "<utf8>"}` so anti-unification has structured input; the renderer unwraps back to the literal `data: <text>` line on the wire.
+### Conformance for streaming exchanges
 
-### gRPC server-streaming
+`wraith check` now scores streaming exchanges under dedicated PASS criteria:
 
-- **Capture**: live forwarding mirrored on the gRPC path. The proxy reads `hyper::body::Frame<Bytes>` items, dispatches Data frames to the downstream client + WREC, and routes Trailers to a separate slot the downstream `http_body::Body` impl yields after the data channel closes. HTTP/2 trailers (`grpc-status`, `grpc-message`) reach the wire correctly so gRPC clients don't see `Internal: missing trailers`.
-- **Projection**: `WrecExchange::stream_events()` projects server-direction Data frames into `StreamEventKind::GrpcFrame` for both `Protocol::GrpcStream` and legacy `Protocol::Http` exchanges with `application/grpc*` content-type.
-- **Synthesis**: per-variant `stream_template`, gRPC server-streaming method detection, suffix anchoring on terminal messages, byte-preserving protobuf re-encoding (empty submessages preserved on the wire when explicitly observed).
-- **Serve**: protocol-aware replay materializer renders templated JSON to protobuf bytes via the route's response descriptor, wraps in length-prefixed gRPC frames, emits the trailer block.
-- **Termination**: streams without `grpc-status` trailers (long-lived bidi like etcd `Watch` cancelled by client deadline) classify as `Truncated`. Replay emits no synthesised `grpc-status: 0`, matching the recording.
+- Event count must match the recording.
+- Per-event structural shape (keys, types, constants) must match.
+- Hole-marked fields (variable LLM token text, etcd event keys) tolerate value variance.
+- Termination shape and gRPC trailers must match.
 
-### Honest conformance
+Previously, streaming exchanges rolled up into the unary scorer where streaming-specific divergences could be diluted into a passing score. New behavior: a streaming Error-severity divergence fails the session.
 
-- **Recorded vs replayed diff** (`crates/wraith/src/conformance/streaming.rs`). The streaming check compares each recording's events against the replayed sequence with template-driven tolerance: holes type-checked, constants exact-matched, optional-vs-default handled correctly. The previous template-vs-template comparison (pre-v0.5.0) was a tautology that scored 100 % regardless of runtime correctness.
-- **§F.3 PASS criteria wired**: streaming exchanges score under `score_streaming_session` with explicit handling for `EventCountMismatch`, `EventSequenceMismatch`, `EventPayloadMismatch`, `FramePositionDrift`, `TerminationMismatch`, and `TrailerMismatch`. Suppressed divergences now factor into the score, not just the report (`[[diff.suppress]]` is no longer cosmetic).
-- **Per-recording target length**: replay emits exactly the same number of events as the recording it's diffed against, so length variance across recordings (LLM streams 11-22 events long) doesn't trip false count mismatches.
-- **gRPC payload tolerance**: the diff decodes protobuf via the route's response descriptor before applying template tolerance. Hole-tolerated fields (etcd event keys, LLM token contents) compare on shape; constants compare on bytes.
-- **Tamper-verified**: editing a single constant in `model/symbols.json` produces a divergence at the tampered position with byte-exact `actual` content. The check has no quiet failure modes for either protocol.
+### `[[diff.suppress]]` now affects the score
+
+Suppression rules in `wraith.toml` are applied before scoring, so a suppressed divergence no longer counts against the conformance score. Previously `[[diff.suppress]]` filtered the report only.
 
 ### Variant routing
 
-- **Body-field guard inference**: synth groups exchanges by status, looks for request-body string fields whose value sets are disjoint across variants, emits `FieldEquals` predicates for the discriminating variants. Catch-all variants (multi-value or unguarded) remain catch-alls.
-- **`[*]` array glob**: the runtime path evaluator handles `messages[*].content` paths via a tokenizer that recognises `.key`, `[N]` index, and `[*]` wildcard segments. `FieldEquals` semantics on a glob: any element at the path equals the expected value.
-- **Specificity-based selection**: when multiple variants' guards match a request, the runtime picks the variant with the most predicates (and breaks ties by `status >= 400` first). A request matching both a loose `model = "tinyllama"` 200 guard and a tight `messages[*].content = "ping"` 404 guard routes to the more-specific 404.
-- **Per-variant `stream_template`**: a route can mix streaming (200 SSE) and non-streaming (404 invalid-model JSON) variants. The streaming template lives on the variant, not the route — non-streaming variants of streaming routes serve a normal HTTP response.
+`wraith synth` infers body-field guards on routes whose variants are discriminated by request-body string fields. Glob paths like `messages[*].content` are supported. At serve time, when multiple variants' guards match a request, `wraith serve` picks the most-specific variant -- so a request that matches both a loose 200 catch-all and a tight 404 error variant routes to the 404.
 
-### Bug fixes
+A single route can mix streaming and non-streaming variants. The 200 SSE variant serves a stream; the sibling 404 invalid-model JSON variant serves a normal response.
 
-- **Synth Create handler**: respects recorded type when filling `created` field. Bool flags (etcd `WatchResponse.created`) no longer get clobbered with epoch timestamps.
-- **Anti-unify**: absent-everywhere proto3 fields drop from the template (vs. emitted as zero-valued Constants); partially-present fields mark Optional and skip default-empty values at materialize.
-- **`dynamic_message_to_json`**: omits unset proto3 singular fields. Prevents phantom empty submessages from leaking into anti-unification.
-- **`synth_model_to_wir`**: deserializes variant guards as `GuardPredicate` then converts via `predicate_to_wir`. Previously a schema mismatch dropped every body-field guard silently during WIR emission.
-- **gRPC Watch round-trip test** replaces the placeholder `#[ignore]` at `runtime/synth_handler.rs::etcd_watch_round_trip_through_synth_pipeline` -- runs deterministically without a live cluster.
+### New twins
 
-### Twins
+- **ollama** -- twins the OpenAI-compat `/v1/chat/completions` endpoint with `stream: true` for any local Ollama model.
+- **etcd-streaming** -- extends the etcd twin with `KV.Watch`, the canonical server-streaming RPC.
 
-- **Ollama LLM streaming twin**: `scripts/exercise-ollama.py` + `tests/fixtures/podman/ollama/`. Twins the OpenAI-compat `/v1/chat/completions` endpoint with `stream: true` for any local Ollama model. Real cycling token output from the served twin.
-- **etcd Watch twin**: extends the existing etcd unary twin with `KV.Watch`. `tests/fixtures/podman/etcd/` brings the cluster up; `scripts/exercise-etcd.py` drives N sessions of varying mutation patterns.
-
-### Infrastructure
-
-- ~25 streaming-related bones merged across the v0.5.0 cycle. Lib test count: 2188 (v0.4.0) -> 2262 (v0.5.0). All integration suites green.
-- `notes/streaming-design.md` is the authoritative reference: WREC schema (§B), anti-unification (§C), conformance hybrid model (§D), runtime serve (§E), test strategy (§F).
+Both ship with podman fixtures so contributors can replay end-to-end.
 
 ## v0.4.0 -- 2026-04-21
 
