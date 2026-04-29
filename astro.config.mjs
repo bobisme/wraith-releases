@@ -19,6 +19,7 @@ export default defineConfig({
           label: 'Guides',
           items: [
             { label: 'Twin Lifecycle', slug: 'twin-lifecycle' },
+            { label: 'Streaming', slug: 'streaming' },
             { label: 'Simulation', slug: 'simulation' },
             { label: 'OpenAPI seed mode', slug: 'openapi' },
           ],

@@ -36,8 +36,9 @@ record → synthesize → verify → repair → repeat
 - **simulate**: fault injection, latency, and rate-limit layers turn your twin into a local chaos lab — deterministically, with a shared RNG seed
 - **trace**: ring-buffered request/response log exposed via `/__wraith/trace/*` for post-test inspection
 - **explore**: (optional) seed from OpenAPI — generate scenario plans and measure spec-vs-recording coverage
+- **streaming**: SSE + gRPC server-streaming end-to-end — record long-lived streams live, synthesize per-event templates, serve realistic stream replay, conformance-check honestly. See [Streaming](https://wraith.cx/streaming/).
 
-Current: 18 twins at PASS (REST, GraphQL, gRPC). See [CHANGELOG.md](./CHANGELOG.md).
+Current: 18 twins at PASS (REST, GraphQL, gRPC unary + server-streaming, SSE). See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Quickstart
 
