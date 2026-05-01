@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.5.1 — 2026-04-30
+
+**v0.4 shakedown follow-ups. Twin-quality fixes + lifecycle commands.**
+
+### Twin-quality fixes
+
+- **DELETE replay matches recorded shape.** `wraith serve` now renders the variant body template on DELETE instead of substituting a hardcoded `{deleted, id}` body. Literal fields like `object: "coupon"` survive.
+- **Numeric epoch fields stay numeric.** Fields like Stripe's `created` (Unix epoch seconds, integer) are no longer overlaid with ISO 8601 strings. The classified clock unit (`epoch_sec` / `epoch_ms` / `iso_string`) drives output, not the field name.
+- **No more `$hole_*` placeholder leaks.** Unfilled holes can never reach the wire under any classification. The hole classifier learns ID shape from observations: prefix, length, and character class. Stripe-shaped IDs (`cus_<14 base62>`) and short token fields (e.g. 7-char uppercase alnum) are generated correctly.
+- **`/__wraith/ready` returns 200 once the listener is bound.** Previously it returned 503 forever, breaking `wraith up`'s ready poll and `wraith status`'s ready probe.
+- **`wraith coverage` reports real session counts.** Previously every route showed `sessions=0`.
+- **Trace ring buffer captures non-200 responses.** `--trace` now records 429s, fault-injected 5xx, throttle, drop, and timeout responses — exactly the responses you want with `--chaos-seed --trace`.
+
+### New commands
+
+- **`wraith down`**: stops twins started by `wraith up`. SIGTERM with SIGKILL escalation. Idempotent.
+- **`wraith status`**: per-twin alive + ready report. Polls `/__wraith/ready` for each running twin.
+- **`wraith env`**: emits `WRAITH_<NAME>_PORT` and `WRAITH_<NAME>_BASE_URL` for each twin in the project manifest. Pasteable into a shell or consumed via `--format json`.
+
+### Manifest plumbs simulation flags through `wraith up`
+
+Project manifests can now drive the v0.4 simulation layers per twin:
+
+```toml
+[twins.stripe]
+path = "twins/stripe"
+port = 8181
+chaos_seed = 42
+latency_mode = "auto"
+trace = true
+trace_capacity = 500
+rate_limit = true
+rate_limit_override = ["GET /v1/foo=5/1sec"]
+debug = false
+listen = "0.0.0.0:8181"
+fidelity = "synth"
+```
+
+All fields optional; existing manifests parse unchanged.
+
 ## v0.5.0 — 2026-04-29
 
 **SSE and gRPC server-streaming.** Record, synthesize, serve, and conformance-check streaming APIs end to end.
