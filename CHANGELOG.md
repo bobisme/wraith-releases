@@ -1,5 +1,46 @@
 # Changelog
 
+## v0.5.2 — 2026-05-01
+
+**Streaming and capture fidelity. Three new fixture twins.**
+
+### Streaming + recording
+
+- **`wraith record` survives SIGTERM mid-stream.** Long SSE/gRPC streams cut by SIGTERM (or `wraith record stop`, vessel, systemd) now persist their WREC and session manifest with `truncated=true` instead of vanishing silently. The forward proxy now also handles SIGTERM; previously only `Ctrl-C` was caught.
+- **In-flight streams pin sessions against the idle timeout.** A long SSE stream (e.g. an LLM streaming for >30s on CPU) no longer fragments surrounding exchanges into separate sessions in `wraith inspect`. Sessions close when the activity actually stops, not when the next exchange happens to start.
+- **gRPC replay is byte-faithful for fixed-length arrays.** Fixed-position event slots in a recorded stream now render with the correct per-slot template instead of position 0's. No more ghost proto3 default values on the wire.
+- **Synthesized 429 bodies match the route's recorded 4xx shape.** Stripe gets `{error: {type, code, message}}`, GitHub gets `{message, documentation_url}`, Twilio and GraphQL likewise. Fallback when no 4xx is recorded is a structured `{status, code, message, retry_after}` — friendlier to clients deserializing into typed error structs.
+- **Volatile response headers freshly emitted at serve time.** `Date`, `Server`, `X-Request-Id`, `Cf-Ray`, `Etag` are dropped at synth time and synthesized at serve time so 200s and 429s carry the same wallclock `Date` source — important for HMAC signers and freshness checks.
+
+### Variant routing
+
+- **Header presence as a guard.** When a single route records both authed (200) and unauthed (401) shapes, `wraith synth` infers `HeaderPresent` / `HeaderAbsent` guards on the discriminating header (e.g. `Authorization`). At serve and check time, requests route to the matching variant. Header-name-agnostic — any consistently-present-vs-absent header qualifies.
+
+### `wraith.toml` artifact completeness
+
+`twin.wir.json` is the documented portable twin artifact. It used to silently drop several pieces of metadata that `wraith serve` already supported via the in-memory model. Now round-tripped:
+
+- Per-route binary content type and body (HTML, plain text, opaque binary endpoints)
+- Per-route gRPC marker
+- Per-variant Lua hook handler
+- Per-route symbol table
+- Per-variant header programs and optional-field lists
+
+All additions are backward-compatible — existing `twin.wir.json` files load unchanged.
+
+### Other
+
+- Exercise scripts force a session boundary (`POST /__wraith/new-session`) between recording iterations. Multi-session runs now produce real session boundaries instead of one giant session.
+- `wraith inspect` surfaces refresh probe recordings (`recordings/refresh/<run_id>/sessions/`) alongside regular ones.
+
+### New twins (podman fixtures)
+
+Three streaming-fixture twins for contributors to replay end to end:
+
+- **mercure** — pure SSE hub. Infinite-stream regression target.
+- **caddy-sse** — minimal controlled SSE fixture with configurable event count, cadence, and payload shape.
+- **qdrant** — vector DB gRPC twin. Validates the unary gRPC + protobuf-descriptor pipeline.
+
 ## v0.5.1 — 2026-04-30
 
 **v0.4 shakedown follow-ups. Twin-quality fixes + lifecycle commands.**
