@@ -7,8 +7,15 @@ Record real API traffic, synthesize a deterministic local twin, and verify confo
 
 ## Prerequisites
 
-- A wraith binary on your `PATH` — see [Installation](/installation/)
+- A wraith binary on your `PATH`:
+
+  ```sh
+  curl -fsSL https://wraith.cx/install.sh | sh
+  ```
+
 - Access to the API you want to twin
+
+See [Installation](/installation/) for pinned versions, custom install directories, and supported prebuilt targets.
 
 ## The full loop in 5 commands
 

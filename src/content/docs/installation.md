@@ -3,16 +3,21 @@ title: Installation
 description: How to get a wraith binary
 ---
 
-## Install with curl
+## Recommended install
 
 ```sh
 curl -fsSL https://wraith.cx/install.sh | sh
 ```
 
-The installer downloads the latest binary from
+The installer downloads the latest public binary from
 [`bobisme/wraith-releases`](https://github.com/bobisme/wraith-releases),
 verifies the SHA-256 checksum, and installs `wraith` into `/usr/local/bin` when
 writable or `~/.local/bin` otherwise.
+
+It prints each step, checks the installed binary with `wraith --version`, and
+warns if the install directory is not on your `PATH`.
+
+## Installer options
 
 Install into a custom directory:
 
@@ -24,6 +29,19 @@ Pin a specific version:
 
 ```sh
 curl -fsSL https://wraith.cx/install.sh | WRAITH_VERSION=0.5.2 sh
+```
+
+Quiet mode for CI or scripts:
+
+```sh
+curl -fsSL https://wraith.cx/install.sh | WRAITH_QUIET=1 sh
+```
+
+Use an alternate release repository or asset mirror:
+
+```sh
+curl -fsSL https://wraith.cx/install.sh | WRAITH_RELEASE_REPO=owner/repo sh
+curl -fsSL https://wraith.cx/install.sh | WRAITH_RELEASE_BASE_URL=https://example.com/releases sh
 ```
 
 Current prebuilt targets:
