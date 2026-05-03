@@ -3,10 +3,36 @@ title: Installation
 description: How to get a wraith binary
 ---
 
-:::note[Private beta]
-Wraith is in private beta. Packaged installers are not yet published. To get
-a binary, contact the maintainer directly or build from source.
-:::
+## Install with curl
+
+```sh
+curl -fsSL https://wraith.cx/install.sh | sh
+```
+
+The installer downloads the latest binary from
+[`bobisme/wraith-releases`](https://github.com/bobisme/wraith-releases),
+verifies the SHA-256 checksum, and installs `wraith` into `/usr/local/bin` when
+writable or `~/.local/bin` otherwise.
+
+Install into a custom directory:
+
+```sh
+curl -fsSL https://wraith.cx/install.sh | WRAITH_INSTALL_DIR="$HOME/bin" sh
+```
+
+Pin a specific version:
+
+```sh
+curl -fsSL https://wraith.cx/install.sh | WRAITH_VERSION=0.5.2 sh
+```
+
+Current prebuilt targets:
+
+- `x86_64-unknown-linux-gnu`
+- `aarch64-apple-darwin`
+
+Linux ARM64 and Intel macOS installers will be enabled after release runners for
+those targets are validated. Unsupported platforms fail before installation.
 
 ## Build from source
 
@@ -28,19 +54,7 @@ install -m 0755 target/release/wraith ~/.local/bin/wraith
 Requirements for building:
 
 - Rust 1.85+ (install via [rustup](https://rustup.rs/))
-- A C toolchain (for `zstd` and `ring`)
-
-## Coming soon
-
-These channels are planned for the public release and are **not live yet**:
-
-- **Homebrew tap** — `brew install bobisme/tap/wraith`
-- **curl installer** — `curl -fsSL https://wraith.cx/install.sh | sh`
-- **GitHub Releases** — prebuilt tarballs for Linux and macOS (x86_64, aarch64)
-
-If you land on this page from an external link expecting any of the above to
-work, please [open an issue](https://github.com/bobisme/wraith-releases/issues)
-so we can fix the link.
+- A C toolchain
 
 ## Verify
 
@@ -50,7 +64,7 @@ wraith --version
 
 ## Runtime requirements
 
-- **OS**: macOS (x86_64, ARM64) or Linux (x86_64, ARM64)
+- **OS**: macOS ARM64 or Linux x86_64 for prebuilt binaries; macOS x86_64 and Linux ARM64 from source for now
 - **Runtime dependencies**: none — wraith is a single static binary
 - **Recording**: access to the upstream API you want to twin
 - **LLM-assisted repair** (optional): local model via ollama, or cloud provider API key

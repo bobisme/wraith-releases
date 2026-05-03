@@ -15,10 +15,21 @@ Your integration tests now run locally, deterministically, with quantitative pro
 
 ## Install
 
-Wraith is in private beta. Packaged installers (Homebrew tap, curl installer,
-GitHub release tarballs) are planned but not yet live. For now, contact the
-maintainer directly or build from source. See [Installation](https://wraith.cx/installation/)
-for details.
+```bash
+curl -fsSL https://wraith.cx/install.sh | sh
+```
+
+The installer downloads the latest public binary release from
+`bobisme/wraith-releases`, verifies its SHA-256 checksum, and installs `wraith`
+into `/usr/local/bin` or `~/.local/bin`.
+
+Current prebuilt targets:
+
+- `x86_64-unknown-linux-gnu`
+- `aarch64-apple-darwin`
+
+See [Installation](https://wraith.cx/installation/) for version pinning and
+manual install details.
 
 ## What wraith does
 
@@ -78,4 +89,4 @@ wraith is distributed under the [Elastic License 2.0](./LICENSE). Free for evalu
 
 ## Support
 
-Private beta — contact the maintainer directly.
+Private beta - contact the maintainer directly.
