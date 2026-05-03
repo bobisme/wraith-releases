@@ -8,14 +8,66 @@ BIN_NAME="wraith"
 INSTALL_DIR="${WRAITH_INSTALL_DIR:-}"
 VERSION="${WRAITH_VERSION:-}"
 RELEASE_BASE_URL="${WRAITH_RELEASE_BASE_URL:-}"
+QUIET="${WRAITH_QUIET:-}"
+
+if [ -t 2 ] && [ -z "${NO_COLOR:-}" ]; then
+    BOLD="$(printf '\033[1m')"
+    DIM="$(printf '\033[2m')"
+    GREEN="$(printf '\033[32m')"
+    BLUE="$(printf '\033[34m')"
+    YELLOW="$(printf '\033[33m')"
+    RED="$(printf '\033[31m')"
+    RESET="$(printf '\033[0m')"
+else
+    BOLD=""
+    DIM=""
+    GREEN=""
+    BLUE=""
+    YELLOW=""
+    RED=""
+    RESET=""
+fi
+
+is_quiet() {
+    case "$QUIET" in
+        1|true|yes|on) return 0 ;;
+        *)             return 1 ;;
+    esac
+}
+
+paint() {
+    color="$1"
+    shift
+    printf "%s%s%s" "$color" "$*" "$RESET"
+}
 
 log() {
+    is_quiet && return 0
     printf "%s\n" "$*" >&2
 }
 
 die() {
-    printf "error: %s\n" "$*" >&2
+    printf "%s %s\n" "$(paint "$RED" "error:")" "$*" >&2
     exit 1
+}
+
+step() {
+    log "$(paint "$BLUE" "==>") $*"
+}
+
+success() {
+    log "$(paint "$GREEN" "ok") $*"
+}
+
+warn() {
+    log "$(paint "$YELLOW" "warning:") $*"
+}
+
+# Print the installer banner and the environment override knobs it supports.
+print_header() {
+    log "$(paint "$BOLD" "wraith installer")"
+    log "$(paint "$DIM" "repo=$REPO version=${VERSION:-latest}")"
+    log ""
 }
 
 # Fetch a URL with retries so transient network failures do not abort installs.
@@ -29,6 +81,7 @@ require_tools() {
     command -v tar >/dev/null 2>&1 || die "tar is required"
     command -v awk >/dev/null 2>&1 || die "awk is required"
     command -v uname >/dev/null 2>&1 || die "uname is required"
+    command -v mktemp >/dev/null 2>&1 || die "mktemp is required"
 
     if ! command -v install >/dev/null 2>&1 && ! command -v cp >/dev/null 2>&1; then
         die "install or cp is required"
@@ -73,12 +126,12 @@ resolve_install_dir() {
 resolve_release() {
     if [ -n "$VERSION" ]; then
         version="${VERSION#v}"
-        log "Using wraith $version..."
+        step "Using wraith $version"
         printf "v%s %s\n" "$version" "$version"
         return
     fi
 
-    log "Fetching latest release..."
+    step "Fetching latest release"
     tag=$(fetch "https://api.github.com/repos/$REPO/releases/latest" | \
         sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n1)
 
@@ -105,11 +158,11 @@ download_assets() {
     tmp="$3"
     target="$4"
 
-    log "Downloading $archive..."
+    step "Downloading $archive"
     fetch "$url" > "$tmp/$archive" || \
         die "download failed for $target. This release may not include your platform: $url"
 
-    log "Downloading checksum..."
+    step "Downloading checksum"
     fetch "$url.sha256" > "$tmp/$archive.sha256" || die "checksum download failed: $url.sha256"
 }
 
@@ -154,6 +207,17 @@ install_binary() {
     fi
 }
 
+# Print the installed binary version if the binary can be executed locally.
+print_installed_version() {
+    binary_path="$1"
+
+    if installed_version=$("$binary_path" --version 2>/dev/null); then
+        success "$installed_version"
+    else
+        warn "installed binary could not be executed for a version check"
+    fi
+}
+
 # Warn when the selected install directory is not currently visible on PATH.
 print_path_hint() {
     install_dir="$1"
@@ -162,15 +226,35 @@ print_path_hint() {
         *":$install_dir:"*) ;;
         *)
             log ""
-            log "Warning: $install_dir is not on your PATH."
+            warn "$install_dir is not on your PATH."
             log "Add this to your shell config:"
             log "    export PATH=\"$install_dir:\$PATH\""
             ;;
     esac
 }
 
+# Print the final success block with the path and next command.
+print_summary() {
+    tag="$1"
+    target="$2"
+    install_dir="$3"
+    binary_path="$install_dir/$BIN_NAME"
+
+    log ""
+    success "Installed $BIN_NAME $tag"
+    log "    Binary: $binary_path"
+    log "    Target: $target"
+    print_installed_version "$binary_path"
+    print_path_hint "$install_dir"
+
+    log ""
+    log "Next:"
+    log "    wraith init myapi --base-url https://api.example.com"
+}
+
 # Run the installer from environment parsing through verified installation.
 main() {
+    print_header
     require_tools
 
     target=$(detect_target)
@@ -186,17 +270,12 @@ main() {
 
     download_assets "$url" "$archive" "$tmp" "$target"
 
-    log "Verifying checksum..."
+    step "Verifying checksum"
     verify_checksum "$tmp/$archive" "$tmp/$archive.sha256"
 
+    step "Installing to $install_dir"
     install_binary "$tmp/$archive" "$tmp" "$install_dir"
-
-    log ""
-    log "Installed $BIN_NAME $tag to $install_dir/$BIN_NAME"
-    print_path_hint "$install_dir"
-
-    log ""
-    log "Next: wraith init myapi --base-url https://api.example.com"
+    print_summary "$tag" "$target" "$install_dir"
 }
 
 main "$@"
