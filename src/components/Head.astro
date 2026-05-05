@@ -1,0 +1,103 @@
+---
+const { head, entry, id, siteTitle } = Astro.locals.starlightRoute;
+const canonical = new URL(Astro.url.pathname, 'https://wraith.cx').toString();
+const title = `${entry.data.title} | ${siteTitle}`;
+const description = entry.data.description || 'Wraith documentation for recorded-traffic API mocking and verified local API twins.';
+const image = 'https://wraith.cx/social-card.png';
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'wraith',
+      item: 'https://wraith.cx/',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: entry.data.title,
+      item: canonical,
+    },
+  ],
+};
+---
+
+{head.map(({ tag: Tag, attrs, content }) => <Tag {...attrs} set:html={content} />)}
+<meta property="og:type" content="article" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={image} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={image} />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="preload" href="/fonts/space-grotesk-400.ttf" as="font" type="font/ttf" crossorigin />
+<link rel="preload" href="/fonts/jetbrains-mono-400.ttf" as="font" type="font/ttf" crossorigin />
+<script type="application/ld+json" set:html={JSON.stringify(breadcrumbs)} />
+<script define:vars={{ docId: id }}>
+  (() => {
+    const endpoint = document.documentElement.dataset.analyticsEndpoint || '';
+    const queue = [];
+    const send = (name, props = {}) => {
+      const payload = {
+        name,
+        path: location.pathname,
+        referrer: document.referrer || '',
+        props,
+        ts: new Date().toISOString(),
+      };
+      queue.push(payload);
+      window.dispatchEvent(new CustomEvent('wraith:analytics', { detail: payload }));
+      if (endpoint && navigator.sendBeacon) {
+        navigator.sendBeacon(endpoint, JSON.stringify(payload));
+      }
+    };
+    window.wraithTrack = send;
+    send(docId === 'quickstart' ? 'quickstart_view' : docId === 'installation' ? 'installation_view' : 'docs_view', { doc: docId });
+    document.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target.closest('a,button') : null;
+      if (!target) return;
+      if (target.matches('[data-code], [title="Copy to clipboard"]')) {
+        send('install_command_copy', { source: location.pathname });
+        return;
+      }
+      if (target instanceof HTMLAnchorElement) {
+        send('docs_link_click', { href: target.href, label: target.textContent?.trim() || '' });
+      }
+    });
+    const observeSearch = () => {
+      const input = document.querySelector('input[type="search"]');
+      if (!input || input.dataset.wraithTracked) return;
+      input.dataset.wraithTracked = 'true';
+      input.addEventListener('change', () => {
+        const query = input.value.trim();
+        if (!query) return;
+        setTimeout(() => {
+          const resultCount = document.querySelectorAll('[data-pagefind-result], .pagefind-ui__result').length;
+          send('search_submitted', { query, result_count: resultCount });
+          send(resultCount === 0 ? 'zero_result_search' : 'search_results_displayed', { query, result_count: resultCount });
+        }, 250);
+      });
+    };
+    const labelCopyButtons = () => {
+      document.querySelectorAll('button[title="Copy to clipboard"], button[data-code]').forEach((button) => {
+        button.setAttribute('type', 'button');
+        button.setAttribute('aria-label', 'Copy command');
+        button.querySelectorAll('div, svg').forEach((icon) => icon.setAttribute('aria-hidden', 'true'));
+      });
+    };
+    observeSearch();
+    labelCopyButtons();
+    new MutationObserver(observeSearch).observe(document.documentElement, { childList: true, subtree: true });
+    new MutationObserver(labelCopyButtons).observe(document.documentElement, { childList: true, subtree: true });
+  })();
+</script>

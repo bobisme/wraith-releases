@@ -1,6 +1,6 @@
 ---
-title: OpenAPI seed mode
-description: Generate scenarios and measure coverage from an OpenAPI spec
+title: Seed recorded API mocks from OpenAPI specs
+description: Generate scenario plans from OpenAPI, smoke-check live services, and measure recording coverage for Wraith API twins.
 ---
 
 Wraith's primary workflow is record -> synthesize -> verify, with no spec required. But when you *do* have an OpenAPI 3.x spec, you can use it two ways:
@@ -8,7 +8,7 @@ Wraith's primary workflow is record -> synthesize -> verify, with no spec requir
 1. **Seed**: generate a scenario plan from the spec and (optionally) execute it against a live API to produce recordings.
 2. **Measure coverage**: compare what's in your recordings to what the spec declares, and surface the gaps.
 
-Both are additive -- they complement recording, they don't replace it. The recorded behaviour still wins for synthesis.
+Both are additive - they complement recording, they don't replace it. The recorded behaviour still wins for synthesis.
 
 ## `wraith explore`
 
@@ -16,7 +16,7 @@ Both are additive -- they complement recording, they don't replace it. The recor
 wraith explore --from-openapi petstore.yaml
 ```
 
-Parses the spec and prints a scenario plan: a structured list of request sequences that together exercise every operation. No network, no writes -- just a plan you can review.
+Parses the spec and prints a scenario plan: a structured list of request sequences that together exercise every operation. No network, no writes - just a plan you can review.
 
 With `--against <url>`, the plan is executed:
 
@@ -78,7 +78,7 @@ Each scenario's steps are sent via async reqwest. The output reports per-step ou
 
 ### Preview vs. recording
 
-`--against` does **not** capture WRECs. It's a preview / smoke check -- useful for "does this spec actually describe the service" or "which operations are live?" For real recordings, use `wraith record` and exercise the twin the usual way. The two tools complement each other:
+`--against` does **not** capture WRECs. It's a preview / smoke check - useful for "does this spec actually describe the service" or "which operations are live?" For real recordings, use `wraith record` and exercise the twin the usual way. The two tools complement each other:
 
 ```sh
 # 1. Preview: does the spec match reality?
@@ -124,7 +124,7 @@ Walks every recorded session and matches request paths against spec templates (t
 }
 ```
 
-The pre-existing `route_coverage` field is unchanged -- it reports coverage against the synthesized twin's routes. The new `spec_coverage` reports coverage against the raw API surface declared in the spec. They answer different questions:
+The pre-existing `route_coverage` field is unchanged - it reports coverage against the synthesized twin's routes. The new `spec_coverage` reports coverage against the raw API surface declared in the spec. They answer different questions:
 
 - `route_coverage` asks: *how much of my twin is exercised by my tests?*
 - `spec_coverage` asks: *how much of the real API surface is in my recordings?*
@@ -144,7 +144,7 @@ When **not** to use it:
 
 ## Auth
 
-OpenAPI security schemes are surfaced in the plan but wraith doesn't automatically source credentials -- pass them via `--header` at execution time:
+OpenAPI security schemes are surfaced in the plan but wraith doesn't automatically source credentials - pass them via `--header` at execution time:
 
 ```sh
 wraith explore --from-openapi stripe.yaml \

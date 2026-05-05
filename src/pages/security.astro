@@ -1,0 +1,29 @@
+---
+import Layout from '../layouts/Landing.astro';
+---
+
+<Layout title="wraith security -- install provenance and traffic scrubbing" description="Security notes for evaluating Wraith: checksum-verified installs, release provenance, local workspaces, traffic scrubbing, and current limitations.">
+  <section class="content-page">
+    <div class="content-shell">
+      <div class="eyebrow">security</div>
+      <h1>Install provenance and traffic safety.</h1>
+      <p class="lead">Wraith asks developers to install a local binary and record API traffic. That makes provenance, scrubbing, and explicit boundaries part of the product, not afterthoughts.</p>
+
+      <h2>Installer provenance</h2>
+      <ul class="note-list">
+        <li><strong>Release source</strong> Public release assets are downloaded from <a href="https://github.com/bobisme/wraith-releases">bobisme/wraith-releases</a>.</li>
+        <li><strong>Checksum verification</strong> The installer verifies the SHA-256 checksum before installing the binary.</li>
+        <li><strong>Version pinning</strong> Use `WRAITH_VERSION` to install a specific public release.</li>
+      </ul>
+
+      <h2>Traffic handling</h2>
+      <p>Wraith records through a local proxy and applies scrub rules before writing WREC files. Header redaction, body pattern matching, and per-twin custom rules are the first line of defense. Review recordings before committing or sharing them.</p>
+
+      <h2>Control-plane endpoints</h2>
+      <p>Recording and serving modes expose local `__wraith` control endpoints for health, readiness, sessions, traces, and related operations. Keep local twins bound to development networks unless you have intentionally configured otherwise.</p>
+
+      <h2>Current limits</h2>
+      <p>This is not a SOC 2 trust center, a hosted API gateway, or production traffic replay infrastructure. Wraith is local-first service virtualization for development, tests, demos, and agent environments.</p>
+    </div>
+  </section>
+</Layout>

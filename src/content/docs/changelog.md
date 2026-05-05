@@ -1,9 +1,9 @@
 ---
-title: Changelog
-description: Release notes and conformance progress
+title: Wraith release notes and API twin conformance progress
+description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
-## v0.5.2 -- 2026-05-01
+## v0.5.2 - 2026-05-01
 
 **Streaming and capture fidelity. Three new fixture twins.**
 
@@ -12,12 +12,12 @@ description: Release notes and conformance progress
 - **`wraith record` survives SIGTERM mid-stream.** Long SSE/gRPC streams cut by SIGTERM (or `wraith record stop`, vessel, systemd) now persist their WREC and session manifest with `truncated=true` instead of vanishing silently. The forward proxy now also handles SIGTERM; previously only `Ctrl-C` was caught.
 - **In-flight streams pin sessions against the idle timeout.** A long SSE stream (e.g. an LLM streaming for >30s on CPU) no longer fragments surrounding exchanges into separate sessions in `wraith inspect`. Sessions close when the activity actually stops, not when the next exchange happens to start.
 - **gRPC replay is byte-faithful for fixed-length arrays.** Fixed-position event slots in a recorded stream now render with the correct per-slot template instead of position 0's. No more ghost proto3 default values on the wire.
-- **Synthesized 429 bodies match the route's recorded 4xx shape.** Stripe gets `{error: {type, code, message}}`, GitHub gets `{message, documentation_url}`, Twilio and GraphQL likewise. Fallback when no 4xx is recorded is a structured `{status, code, message, retry_after}` -- friendlier to clients deserializing into typed error structs.
-- **Volatile response headers freshly emitted at serve time.** `Date`, `Server`, `X-Request-Id`, `Cf-Ray`, `Etag` are dropped at synth time and synthesized at serve time so 200s and 429s carry the same wallclock `Date` source -- important for HMAC signers and freshness checks.
+- **Synthesized 429 bodies match the route's recorded 4xx shape.** Stripe gets `{error: {type, code, message}}`, GitHub gets `{message, documentation_url}`, Twilio and GraphQL likewise. Fallback when no 4xx is recorded is a structured `{status, code, message, retry_after}` - friendlier to clients deserializing into typed error structs.
+- **Volatile response headers freshly emitted at serve time.** `Date`, `Server`, `X-Request-Id`, `Cf-Ray`, `Etag` are dropped at synth time and synthesized at serve time so 200s and 429s carry the same wallclock `Date` source - important for HMAC signers and freshness checks.
 
 ### Variant routing
 
-- **Header presence as a guard.** When a single route records both authed (200) and unauthed (401) shapes, `wraith synth` infers `HeaderPresent` / `HeaderAbsent` guards on the discriminating header (e.g. `Authorization`). At serve and check time, requests route to the matching variant. Header-name-agnostic -- any consistently-present-vs-absent header qualifies.
+- **Header presence as a guard.** When a single route records both authed (200) and unauthed (401) shapes, `wraith synth` infers `HeaderPresent` / `HeaderAbsent` guards on the discriminating header (e.g. `Authorization`). At serve and check time, requests route to the matching variant. Header-name-agnostic - any consistently-present-vs-absent header qualifies.
 
 ### `wraith.toml` artifact completeness
 
@@ -29,7 +29,7 @@ description: Release notes and conformance progress
 - Per-route symbol table
 - Per-variant header programs and optional-field lists
 
-All additions are backward-compatible -- existing `twin.wir.json` files load unchanged.
+All additions are backward-compatible - existing `twin.wir.json` files load unchanged.
 
 ### Other
 
@@ -40,11 +40,11 @@ All additions are backward-compatible -- existing `twin.wir.json` files load unc
 
 Three streaming-fixture twins for contributors to replay end to end:
 
-- **mercure** -- pure SSE hub. Infinite-stream regression target.
-- **caddy-sse** -- minimal controlled SSE fixture with configurable event count, cadence, and payload shape.
-- **qdrant** -- vector DB gRPC twin. Validates the unary gRPC + protobuf-descriptor pipeline.
+- **mercure** - pure SSE hub. Infinite-stream regression target.
+- **caddy-sse** - minimal controlled SSE fixture with configurable event count, cadence, and payload shape.
+- **qdrant** - vector DB gRPC twin. Validates the unary gRPC + protobuf-descriptor pipeline.
 
-## v0.5.1 -- 2026-04-30
+## v0.5.1 - 2026-04-30
 
 **v0.4 shakedown follow-ups. Twin-quality fixes + lifecycle commands.**
 
@@ -55,7 +55,7 @@ Three streaming-fixture twins for contributors to replay end to end:
 - **No more `$hole_*` placeholder leaks.** Unfilled holes can never reach the wire under any classification. The hole classifier learns ID shape from observations: prefix, length, and character class. Stripe-shaped IDs (`cus_<14 base62>`) and short token fields (e.g. 7-char uppercase alnum) are generated correctly.
 - **`/__wraith/ready` returns 200 once the listener is bound.** Previously it returned 503 forever, breaking `wraith up`'s ready poll and `wraith status`'s ready probe.
 - **`wraith coverage` reports real session counts.** Previously every route showed `sessions=0`.
-- **Trace ring buffer captures non-200 responses.** `--trace` now records 429s, fault-injected 5xx, throttle, drop, and timeout responses -- exactly the responses you want with `--chaos-seed --trace`.
+- **Trace ring buffer captures non-200 responses.** `--trace` now records 429s, fault-injected 5xx, throttle, drop, and timeout responses - exactly the responses you want with `--chaos-seed --trace`.
 
 ### New commands
 
@@ -84,14 +84,14 @@ fidelity = "synth"
 
 All fields optional; existing manifests parse unchanged.
 
-## v0.5.0 -- 2026-04-29
+## v0.5.0 - 2026-04-29
 
 **SSE and gRPC server-streaming.** Record, synthesize, serve, and conformance-check streaming APIs end to end. See the [Streaming](/streaming/) guide.
 
 ### Streaming protocols
 
-- **SSE** (`text/event-stream`): `wraith record` captures live without buffering -- long-lived streams no longer deadlock the recorder. `wraith serve` emits realistic streams with per-event timing and rotating per-event content (an LLM twin emits the recorded token sequence, not one repeated character).
-- **gRPC server-streaming**: `wraith record` forwards frames live with HTTP/2 trailers preserved. `wraith serve` emits frame-correct length-prefixed protobuf with `grpc-status` trailers -- gRPC clients connect and stream without `Internal: missing trailers`.
+- **SSE** (`text/event-stream`): `wraith record` captures live without buffering - long-lived streams no longer deadlock the recorder. `wraith serve` emits realistic streams with per-event timing and rotating per-event content (an LLM twin emits the recorded token sequence, not one repeated character).
+- **gRPC server-streaming**: `wraith record` forwards frames live with HTTP/2 trailers preserved. `wraith serve` emits frame-correct length-prefixed protobuf with `grpc-status` trailers - gRPC clients connect and stream without `Internal: missing trailers`.
 - Long-lived bidi streams (cancelled by client deadline, no trailers received) classify as truncated; replay matches.
 
 ### Conformance for streaming exchanges
@@ -111,18 +111,18 @@ Suppression rules in `wraith.toml` are applied before scoring, so a suppressed d
 
 ### Variant routing
 
-`wraith synth` infers body-field guards on routes whose variants are discriminated by request-body string fields. Glob paths like `messages[*].content` are supported. At serve time, when multiple variants' guards match a request, `wraith serve` picks the most-specific variant -- so a request that matches both a loose 200 catch-all and a tight 404 error variant routes to the 404.
+`wraith synth` infers body-field guards on routes whose variants are discriminated by request-body string fields. Glob paths like `messages[*].content` are supported. At serve time, when multiple variants' guards match a request, `wraith serve` picks the most-specific variant - so a request that matches both a loose 200 catch-all and a tight 404 error variant routes to the 404.
 
 A single route can mix streaming and non-streaming variants. The 200 SSE variant serves a stream; the sibling 404 invalid-model JSON variant serves a normal response.
 
 ### New twins
 
-- **ollama** -- twins the OpenAI-compat `/v1/chat/completions` endpoint with `stream: true` for any local Ollama model.
-- **etcd-streaming** -- extends the etcd twin with `KV.Watch`, the canonical server-streaming RPC.
+- **ollama** - twins the OpenAI-compat `/v1/chat/completions` endpoint with `stream: true` for any local Ollama model.
+- **etcd-streaming** - extends the etcd twin with `KV.Watch`, the canonical server-streaming RPC.
 
 Both ship with podman fixtures so contributors can replay end-to-end.
 
-## v0.4.0 -- 2026-04-21
+## v0.4.0 - 2026-04-21
 
 **Faulty-service simulation + OpenAPI seed + trace endpoints. Six orphan subsystems wired into the CLI.**
 
@@ -132,8 +132,8 @@ See the [Simulation](/simulation/) guide for the fault/latency/rate-limit story 
 
 - **Fault injection** (`--fault-profile <path>`, `--chaos-seed <u64>`): six fault types (Error / Delay / Timeout / Drop / Throttle / Partial), deterministic seeded RNG, route globs, header matching, percentage rolls, per-rule trigger caps. `generate_chaos_profile` builds a realistic mix from the loaded WIR when given just a seed.
 - **Latency simulation** (`--latency-mode <fixed|uniform|recorded|normal|percentile>` + aux flags): per-route overrides, seeded ChaCha RNG for deterministic replay. When a fault `Delay` rule fires, it replaces the latency simulator's contribution for that request (no compounding).
-- **Rate-limit simulation** (`--rate-limit`, `--rate-limit-override "METHOD /path=N/Wsec"`): FixedWindow and SlidingWindow algorithms, standard `X-RateLimit-*` + `Retry-After` headers, shared 429-response builder used by both fault `Throttle` and the rate-limit gate.
-- **Evaluation order**: rate-limit -> fault -> latency -> dispatch. All three layers are `Option<Arc<...>>` -- zero overhead when their flags are absent.
+- **Rate-limit simulation** (`--rate-limit`, `--rate-limit-override "METHOD /path=N/Wsec"`): FixedWindow and SlidingWindow algorithms, standard `X-RateLimit-*` + `Retry-After` headers, shared 429-response builder for fault `Throttle` and the rate-limit gate.
+- **Evaluation order**: rate-limit -> fault -> latency -> dispatch. All three layers are `Option<Arc<...>>` - zero overhead when their flags are absent.
 
 ### Trace endpoints (`--trace [--trace-capacity N]`)
 
@@ -145,7 +145,7 @@ See the [Simulation](/simulation/) guide for the fault/latency/rate-limit story 
 ### Drift classification in `wraith check`
 
 - Each divergence gets a stable `drift_id` (fingerprint) and a `DriftType` classification (schema-change / field-removed / status-shift / etc.).
-- JSON envelope adds a `drifts[]` summary grouping divergences by `drift_id`, and per-divergence `drift_id` + `drift_type`. Additive only -- existing consumers see the old shape when `skip_serializing_if` suppresses empty fields.
+- JSON envelope adds a `drifts[]` summary grouping divergences by `drift_id`, and per-divergence `drift_id` + `drift_type`. Additive only - existing consumers see the old shape when `skip_serializing_if` suppresses empty fields.
 - `twins/<name>/drift.toml` (sibling of `scrub.toml`) supports `[[suppress]]` and `[[reclassify]]` rules matched by glob on `drift_id` / `route` / `path` / `drift_type`. Absent file is a silent no-op.
 - Refresh integration deferred until refresh's probe-execution path lands.
 
@@ -153,7 +153,7 @@ See the [Simulation](/simulation/) guide for the fault/latency/rate-limit story 
 
 - New `wraith explore --from-openapi <spec.yaml> [--against <url>]`: parses OpenAPI 3.x (YAML or JSON), generates scenario plans, optionally executes them against a live URL and reports per-step match/mismatch/error counts. Auth via repeated `--header` flags.
 - `wraith coverage --openapi <spec>` extends coverage to report spec-vs-recordings gaps (`covered_count`, `total_count`, `uncovered_operations`).
-- Additive JSON envelope fields -- no breaking changes to existing coverage consumers.
+- Additive JSON envelope fields - no breaking changes to existing coverage consumers.
 
 ### Post-v0.3.0 bug-hunt round
 
@@ -174,7 +174,7 @@ See the [Simulation](/simulation/) guide for the fault/latency/rate-limit story 
 
 ---
 
-## v0.3.0 -- 2026-03-30
+## v0.3.0 - 2026-03-30
 
 **18 twins (REST + GraphQL + gRPC). All PASS. Honest conformance with granular suppression.**
 
@@ -212,7 +212,7 @@ See the [Simulation](/simulation/) guide for the fault/latency/rate-limit story 
 
 ---
 
-## v0.2.0 -- 2026-03-27
+## v0.2.0 - 2026-03-27
 
 **15 APIs at zero divergences. 53/53 sessions passing.**
 
@@ -224,7 +224,7 @@ GraphQL (2): Linear (19 ops), Saleor (16 ops, anonymous queries).
 - **GraphQL operation routing**: Detects GraphQL endpoints, splits single `POST /graphql` route into per-operation variants with guards. Handles both named operations (`operationName` field) and anonymous queries (parsed root field). New `QueryRootField` guard predicate.
 - **Header allowlist**: Replaced 40+ entry blocklist with 3-entry allowlist (content-type, www-authenticate, proxy-authenticate). Opt-in via `with_extra_compare_headers()`.
 - **Divergence suppression**: `[[diff.suppress]]` in wraith.toml for user-declared suppression rules with glob patterns. `--show-suppressed` flag lists distinct suppressed paths with reasons.
-- **Transparent heuristics**: Hex color normalization, search/list-like body classification, scalar clobber guard -- all reported as suppressed, not hidden.
+- **Transparent heuristics**: Hex color normalization, search/list-like body classification, scalar clobber guard - all reported as suppressed, not hidden.
 - **Session tagging**: `wraith record --tag` + `wraith synth --tag` for selective synthesis.
 - **Recording control plane**: `/__wraith/health`, `/__wraith/ready`, `/__wraith/info` endpoints during recording.
 - **Agentic route fixer**: 5 modules, 12 tools, text-based TOOL_CALL protocol. Verified end-to-end.

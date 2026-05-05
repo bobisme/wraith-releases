@@ -1,6 +1,6 @@
 ---
-title: Installation
-description: How to get a wraith binary
+title: Install the Wraith API twin CLI
+description: Install Wraith from the checksum-verified release script, pin versions, choose a target directory, troubleshoot PATH, or build from source.
 ---
 
 ## Recommended install
@@ -54,10 +54,12 @@ those targets are validated. Unsupported platforms fail before installation.
 
 ## Build from source
 
-Wraith is a single Rust binary with no runtime dependencies.
+Wraith is a single Rust binary with no runtime dependencies. The full source
+repository is private during the current beta. If you have source access, build
+from the repository URL you were given:
 
 ```sh
-git clone <private-repo-url> wraith
+git clone <source-repo-url> wraith
 cd wraith
 cargo build --release
 ./target/release/wraith --version
@@ -74,6 +76,44 @@ Requirements for building:
 - Rust 1.85+ (install via [rustup](https://rustup.rs/))
 - A C toolchain
 
+## Manual checksum verification
+
+The install script verifies SHA-256 checksums automatically. To inspect a release
+manually, download the archive and matching `.sha256` file from
+[`bobisme/wraith-releases`](https://github.com/bobisme/wraith-releases), then run:
+
+```sh
+sha256sum -c wraith-<target>.tar.gz.sha256
+```
+
+On macOS:
+
+```sh
+shasum -a 256 -c wraith-<target>.tar.gz.sha256
+```
+
+## Uninstall
+
+Remove the installed binary from the directory reported by the installer:
+
+```sh
+rm -f ~/.local/bin/wraith
+# or, if installed system-wide:
+sudo rm -f /usr/local/bin/wraith
+```
+
+## PATH troubleshooting
+
+If `wraith --version` fails after installation, add the install directory to
+your shell path and restart the shell:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+For persistent shell configuration, add that line to `~/.zshrc`, `~/.bashrc`, or
+your shell profile.
+
 ## Verify
 
 ```sh
@@ -83,9 +123,18 @@ wraith --version
 ## Runtime requirements
 
 - **OS**: macOS ARM64 or Linux x86_64 for prebuilt binaries; macOS x86_64 and Linux ARM64 from source for now
-- **Runtime dependencies**: none — wraith is a single static binary
+- **Runtime dependencies**: none; wraith is a single static binary
 - **Recording**: access to the upstream API you want to twin
 - **LLM-assisted repair** (optional): local model via ollama, or cloud provider API key
+
+## Prebuilt target matrix
+
+| Target | Status |
+|---|---|
+| Linux x86_64 | Prebuilt |
+| macOS Apple silicon | Prebuilt |
+| Linux ARM64 | Build from source until release runners are validated |
+| macOS Intel | Build from source until release runners are validated |
 
 ## Next steps
 

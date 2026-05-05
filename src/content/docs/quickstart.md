@@ -1,7 +1,23 @@
 ---
-title: Quickstart
-description: Get a twin running in 5 minutes
+title: Record API traffic locally with Wraith
+description: "Build a verified local API mock in five commands: record real traffic, synthesize a deterministic twin, check conformance, and serve it."
 ---
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Record API traffic locally with Wraith",
+  "description": "Build a verified local API mock from real traffic in five commands.",
+  "step": [
+    {"@type": "HowToStep", "name": "Initialize a twin", "text": "Run wraith init with the upstream API base URL."},
+    {"@type": "HowToStep", "name": "Record API traffic", "text": "Start the local Wraith proxy and exercise the upstream API through it."},
+    {"@type": "HowToStep", "name": "Synthesize the twin", "text": "Run wraith synth to build a deterministic model from recorded exchanges."},
+    {"@type": "HowToStep", "name": "Verify conformance", "text": "Run wraith check to compare the twin against the original recordings."},
+    {"@type": "HowToStep", "name": "Serve the local twin", "text": "Run wraith serve and point tests at the local API mock."}
+  ]
+}
+</script>
 
 Record real API traffic, synthesize a deterministic local twin, and verify conformance. No spec required. No vendor cooperation needed.
 
@@ -66,12 +82,12 @@ This starts a reverse proxy. Point your application (or exercise script) at `htt
 
 Secrets are scrubbed through a 3-layer pipeline **before** anything hits disk. Press Ctrl-C to stop recording.
 
-For HTTPS upstream APIs (GitHub, Stripe, Cloudflare, etc.), wraith handles TLS automatically -- your app sends plain HTTP to the proxy.
+For HTTPS upstream APIs (GitHub, Stripe, Cloudflare, etc.), wraith handles TLS automatically - your app sends plain HTTP to the proxy.
 
 **Tip:** Run your exercise multiple times with different data to get diverse recordings. More observations = better model.
 
 ```sh
-# Record multiple sessions -- use /__wraith/new-session to force boundaries
+# Record multiple sessions - use /__wraith/new-session to force boundaries
 wraith record myapi --port 8080 &
 python exercise-myapi.py --base-url http://localhost:8080 --sessions 20
 curl -X POST http://localhost:8080/__wraith/new-session    # close current session
@@ -97,7 +113,7 @@ This analyzes all recordings and builds a model:
 - **State inference**: detects CRUD operations and entity types
 - **Route normalization**: parameterizes dynamic path segments (IDs, slugs)
 
-Output: `twins/myapi/model/symbols.json` -- the model the twin serves from.
+Output: `twins/myapi/model/symbols.json` - the model the twin serves from.
 
 ```
 synth  myapi  25 routes  2146 symbols  22 state-ops
@@ -118,7 +134,7 @@ Replays every recorded exchange through the synthesized model and compares respo
     type_mismatch: 1 (warning)
 ```
 
-The `--in-memory` flag runs the check without starting an HTTP server -- faster and simpler.
+The `--in-memory` flag runs the check without starting an HTTP server - faster and simpler.
 
 To see what the engine is suppressing (generated IDs, timestamps, list contents):
 
@@ -170,7 +186,7 @@ For APIs that require authentication (GitHub, Stripe, Cloudflare, etc.):
 1. Set your API key in the environment
 2. Your exercise script passes auth headers through the proxy
 3. Wraith forwards them to the real API during recording (and scrubs them before writing to disk)
-4. The twin does not validate auth headers when serving — it's local
+4. The twin does not validate auth headers when serving because it's local
 
 ```sh
 export GITHUB_TOKEN=ghp_xxx
@@ -180,15 +196,15 @@ curl http://localhost:8080/user -H "Authorization: token $GITHUB_TOKEN"
 kill %1
 wraith synth github
 wraith serve github --port 8081
-# The twin does not check auth — any request that matches a route gets the stored response
+# The twin does not check auth. Any request that matches a route gets the stored response
 curl http://localhost:8081/user
 ```
 
-If your tests rely on getting `401` for a bad token, model that explicitly — either record the 401 exchange so it becomes a variant, or write a small Lua handler.
+If your tests rely on getting `401` for a bad token, model that explicitly. Either record the 401 exchange so it becomes a variant, or write a small Lua handler.
 
 ## Exercise scripts
 
-For best results, write a Python script that exercises the API endpoints you need:
+For reliable synthesis, write a Python script that exercises the API endpoints you need:
 
 ```python
 #!/usr/bin/env python3
@@ -251,7 +267,7 @@ wraith reduce myapi --target-size 50%              # keep 50%, move the rest
 wraith reduce myapi --target-size 20 --strategy diversity  # keep 20 most diverse sessions
 ```
 
-Strategies: `coverage` (default -- fewest sessions covering all routes), `diversity` (maximize response shape variety), `recency` (keep newest). Removed sessions are moved, not deleted.
+Strategies: `coverage` (default - fewest sessions covering all routes), `diversity` (maximize response shape variety), `recency` (keep newest). Removed sessions are moved, not deleted.
 
 ## Accepting known divergences
 
@@ -306,6 +322,6 @@ Every command supports `--format pretty` (default TTY), `--format text` (pipes),
 
 ## Next steps
 
-- [Twin Lifecycle](/twin-lifecycle/) -- full record -> synth -> check -> serve workflow with Lua handlers
-- [Configuration Reference](/configuration/) -- all `wraith.toml` and `scrub.toml` fields
-- `wraith <command> --help` -- detailed help with examples for every command
+- [Twin Lifecycle](/twin-lifecycle/) - full record -> synth -> check -> serve workflow with Lua handlers
+- [Configuration Reference](/configuration/) - all `wraith.toml` and `scrub.toml` fields
+- `wraith <command> --help` - detailed help with examples for every command

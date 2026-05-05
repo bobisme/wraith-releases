@@ -1,0 +1,27 @@
+---
+const { toc } = Astro.locals.starlightRoute;
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+const renderItems = (items: any[]): string =>
+  `<ul>${items
+    .map((item) => {
+      const children = item.children?.length ? renderItems(item.children) : '';
+      return `<li><a href="#${escapeHtml(item.slug)}">${escapeHtml(item.text)}</a>${children}</li>`;
+    })
+    .join('')}</ul>`;
+---
+
+{
+  toc && (
+    <starlight-toc data-min-h={toc.minHeadingLevel} data-max-h={toc.maxHeadingLevel}>
+      <nav aria-label={Astro.locals.t('tableOfContents.onThisPage')}>
+        <div id="starlight__on-this-page" class="toc-label">{Astro.locals.t('tableOfContents.onThisPage')}</div>
+        <Fragment set:html={renderItems(toc.items)} />
+      </nav>
+    </starlight-toc>
+  )
+}

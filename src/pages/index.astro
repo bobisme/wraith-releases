@@ -2,7 +2,10 @@
 import Layout from '../layouts/Landing.astro';
 ---
 
-<Layout title="wraith -- record any API. run a verified local twin.">
+<Layout
+  title="wraith -- API mocking from recorded traffic"
+  description="API mocking from recorded traffic. Wraith records real API calls, synthesizes a deterministic local twin, and verifies it against the real thing for local dev, CI, demos, and agents."
+>
 
   <!-- ============================================================
        HERO
@@ -14,44 +17,46 @@ import Layout from '../layouts/Landing.astro';
           <div class="eyebrow">
             <span class="line"></span>
             <span class="pulse"></span>
-            api twin system
+            recorded-traffic API mocking
           </div>
 
           <h1 class="lede">
-            Record any API.<br />
-            Run a <em>verified</em><br />
-            local twin.
+            API mocks from<br />
+            real traffic,<br />
+            <em>verified</em>.
           </h1>
 
           <p class="sub">
-            Wraith turns recorded API traffic into a fast, correct local mock &mdash;
-            <strong>deterministic, stateful, and proven against the real thing.</strong>
-            For agents and humans who need a dependable service to build against,
-            not a pile of hand-written stubs.
+            Wraith records your app's calls to third-party APIs, synthesizes a fast local mock,
+            and checks the twin against the original recordings.
+            <strong>Deterministic, stateful, and proven against the real thing.</strong>
+            Build CI, demos, and agents against a dependable service, not hand-written stubs.
           </p>
 
           <div class="cta-row">
-            <a href="/quickstart/" class="btn btn-primary chev">quickstart</a>
-            <a href="/installation/" class="btn btn-ghost chev">install notes</a>
+            <a href="/quickstart/" class="btn btn-primary chev" data-track="homepage_cta_click">quickstart</a>
+            <a href="/installation/" class="btn btn-ghost chev" data-track="homepage_cta_click">install notes</a>
+            <a href="mailto:info@wraith.cx" class="btn btn-ghost chev" data-track="team_contact_clicked">info@wraith.cx</a>
           </div>
 
           <div class="install-card" aria-label="Install wraith">
             <div class="install-top">
               <span>install</span>
-              <span>checksum verified</span>
+              <button type="button" class="copy-install" data-copy-install data-track="install_command_copy">copy command</button>
             </div>
             <pre><code>curl -fsSL https://wraith.cx/install.sh | sh</code></pre>
           </div>
 
           <p class="install-caption">
-            Prebuilt binaries for Linux x86_64 and macOS Apple silicon. Pin a version with <code>WRAITH_VERSION</code>.
+            Local-first CLI. Checksum verified. Prebuilt binaries for Linux x86_64 and macOS Apple silicon.
+            Latest release: <a href="/changelog/">v0.5.2</a>. Pin a version with <code>WRAITH_VERSION</code>.
           </p>
 
-          <div class="trust-row" style="display:none">
-            <div class="trust"><span class="k">18</span>real APIs tested</div>
-            <div class="trust"><span class="k">100%</span>conformance or nothing</div>
-            <div class="trust"><span class="k">0</span>hand-written stubs</div>
-            <div class="trust"><span class="k">0ms</span>to first byte</div>
+          <div class="trust-row">
+            <div class="trust"><span class="k">18</span> fixture twins passing</div>
+            <div class="trust"><span class="k">100%</span> conformance target</div>
+            <div class="trust"><span class="k">3</span> pre-write scrub layers</div>
+            <div class="trust"><span class="k">v0.5.2</span> latest release</div>
           </div>
         </div>
 
@@ -65,7 +70,9 @@ import Layout from '../layouts/Landing.astro';
             <span>network &middot; <span class="mode" id="vizMode">init</span></span>
           </div>
           <div class="viz-stage">
-            <svg id="flowSvg" viewBox="0 0 440 460" preserveAspectRatio="xMidYMid meet">
+            <svg id="flowSvg" viewBox="0 0 440 460" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="flowTitle flowDesc">
+              <title id="flowTitle">Wraith records real API traffic and serves a verified local twin</title>
+              <desc id="flowDesc">A product workflow diagram showing your app sending requests through Wraith to a real API, then Wraith synthesizing and serving a deterministic local twin.</desc>
               <defs>
                 <pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse">
                   <path d="M 20 0 L 0 0 0 20" stroke="rgba(255,255,255,0.03)" fill="none"/>
@@ -251,57 +258,57 @@ import Layout from '../layouts/Landing.astro';
     <div class="container">
       <div class="section-head">
         <div class="section-tag">&sect;01 &middot; <span>loop</span></div>
-        <h2 class="section-title">Five commands. <em>Zero</em> to twin.</h2>
+        <h2 class="section-title">Five commands. <em>Traffic replay</em> to twin.</h2>
       </div>
 
       <div class="loop">
         <div class="loop-steps" id="loopSteps">
-          <div class="step" data-i="0">
+          <button type="button" class="step" data-i="0" aria-pressed="false">
             <div class="step-num">01</div>
             <div class="step-body">
               <div class="verb">wraith <span class="sub-cmd">init</span> myapi</div>
               <div class="desc">Scaffold a twin directory with config, scrub rules, and empty recordings.</div>
             </div>
             <div class="step-meta">~2s</div>
-          </div>
-          <div class="step" data-i="1">
+          </button>
+          <button type="button" class="step" data-i="1" aria-pressed="false">
             <div class="step-num">02</div>
             <div class="step-body">
               <div class="verb">wraith <span class="sub-cmd">record</span> myapi</div>
               <div class="desc">Start a reverse proxy. Point your app at it and exercise the API normally.</div>
             </div>
             <div class="step-meta">scrubbed</div>
-          </div>
-          <div class="step" data-i="2">
+          </button>
+          <button type="button" class="step" data-i="2" aria-pressed="false">
             <div class="step-num">03</div>
             <div class="step-body">
               <div class="verb">wraith <span class="sub-cmd">synth</span> myapi</div>
               <div class="desc">Anti-unify responses, classify holes, infer state. Build the model.</div>
             </div>
             <div class="step-meta">25 routes</div>
-          </div>
-          <div class="step" data-i="3">
+          </button>
+          <button type="button" class="step" data-i="3" aria-pressed="false">
             <div class="step-num">04</div>
             <div class="step-body">
               <div class="verb">wraith <span class="sub-cmd">check</span> myapi</div>
               <div class="desc">Replay every recorded exchange through the model. Semantic diff per route.</div>
             </div>
             <div class="step-meta">100% pass</div>
-          </div>
-          <div class="step" data-i="4">
+          </button>
+          <button type="button" class="step" data-i="4" aria-pressed="false">
             <div class="step-num">05</div>
             <div class="step-body">
               <div class="verb">wraith <span class="sub-cmd">serve</span> myapi</div>
               <div class="desc">The twin is now an HTTP server. Point your tests at localhost and go.</div>
             </div>
             <div class="step-meta">:8081</div>
-          </div>
+          </button>
         </div>
 
         <div class="terminal">
           <div class="terminal-head">
             <div class="term-dots"><span class="d"></span><span class="d"></span><span class="d"></span></div>
-            <span>~/projects/myapi &mdash; zsh</span>
+            <span>~/projects/myapi · zsh</span>
             <span class="term-size">80&times;24</span>
           </div>
           <div class="terminal-body" id="term"></div>
@@ -344,7 +351,7 @@ import Layout from '../layouts/Landing.astro';
 
         <div class="verify-copy">
           <p><strong>Every mock library ships a promise.</strong> Wraith ships a proof. Every exchange you recorded is replayed through the synthesized model and compared with a semantic diff.</p>
-          <p>Divergences are categorized, counted, and either suppressed intentionally or fail the build. The twin isn't a sketch of your API &mdash; it's an assertion.</p>
+          <p>Divergences are categorized, counted, and either suppressed intentionally or fail the build. The twin isn't a sketch of your API. It's an assertion.</p>
 
           <ul class="verify-list">
             <li>
@@ -365,7 +372,7 @@ import Layout from '../layouts/Landing.astro';
               <div class="mark">03</div>
               <div>
                 <div class="t">Semantic diff</div>
-                <div class="d">Type mismatches, missing fields, value drift &mdash; categorized and scored. Suppress what's expected. Fail the rest.</div>
+                <div class="d">Type mismatches, missing fields, and value drift are categorized and scored. Suppress what's expected. Fail the rest.</div>
               </div>
             </li>
           </ul>
@@ -384,10 +391,10 @@ import Layout from '../layouts/Landing.astro';
         <h2 class="section-title">Built for the <em>messy</em> shape of real services.</h2>
       </div>
 
-      <div class="features">
-        <div class="feat">
+      <ul class="features">
+        <li class="feat">
           <div class="feat-head">
-            <svg class="feat-icon" viewBox="0 0 28 28" fill="none">
+            <svg class="feat-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true" focusable="false">
               <rect x="4" y="6" width="20" height="16" stroke="#7df9ff" stroke-width="1"/>
               <path d="M4 11 L24 11" stroke="#7df9ff" stroke-width="1" opacity=".4"/>
               <circle cx="8" cy="8.5" r="1" fill="#7df9ff"/>
@@ -397,11 +404,11 @@ import Layout from '../layouts/Landing.astro';
           <h3>Stateful CRUD, <em>free</em></h3>
           <p>The synth stage detects create/read/update/delete on entities. POST then GET returns what you POSTed. Generated IDs stay consistent across routes.</p>
           <div class="feat-foot">STATE &middot; <span>inferred</span></div>
-        </div>
+        </li>
 
-        <div class="feat">
+        <li class="feat">
           <div class="feat-head">
-            <svg class="feat-icon" viewBox="0 0 28 28" fill="none">
+            <svg class="feat-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true" focusable="false">
               <circle cx="14" cy="14" r="8" stroke="#7df9ff" stroke-width="1"/>
               <circle cx="14" cy="14" r="2" fill="#7df9ff"/>
               <path d="M14 2 L14 6 M14 22 L14 26 M2 14 L6 14 M22 14 L26 14" stroke="#7df9ff" stroke-width="1"/>
@@ -411,11 +418,11 @@ import Layout from '../layouts/Landing.astro';
           <h3>3-layer <em>scrubbing</em></h3>
           <p>Secrets are removed before anything hits disk. Header redaction, body pattern matching, and pluggable rules per twin. Your recording never contains tokens.</p>
           <div class="feat-foot">SCRUB &middot; <span>pre-write</span></div>
-        </div>
+        </li>
 
-        <div class="feat">
+        <li class="feat">
           <div class="feat-head">
-            <svg class="feat-icon" viewBox="0 0 28 28" fill="none">
+            <svg class="feat-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true" focusable="false">
               <path d="M4 14 L10 8 L14 12 L18 6 L24 14" stroke="#7df9ff" stroke-width="1" fill="none"/>
               <path d="M4 20 L24 20" stroke="#3a4456" stroke-width="1"/>
               <circle cx="10" cy="8" r="1" fill="#7df9ff"/>
@@ -426,11 +433,11 @@ import Layout from '../layouts/Landing.astro';
           <h3>Deterministic <em>playback</em></h3>
           <p>Same request, same response. Counters, pseudo-random generators, and time all seed from request context. Your flaky integration test isn't flaky anymore.</p>
           <div class="feat-foot">DETERMINISTIC &middot; <span>seeded</span></div>
-        </div>
+        </li>
 
-        <div class="feat">
+        <li class="feat">
           <div class="feat-head">
-            <svg class="feat-icon" viewBox="0 0 28 28" fill="none">
+            <svg class="feat-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true" focusable="false">
               <rect x="4" y="4" width="20" height="20" stroke="#7df9ff" stroke-width="1"/>
               <path d="M4 4 L24 24 M24 4 L4 24" stroke="#7df9ff" stroke-width=".5" opacity=".3"/>
               <circle cx="14" cy="14" r="3" fill="#11151c" stroke="#7df9ff"/>
@@ -440,23 +447,23 @@ import Layout from '../layouts/Landing.astro';
           <h3>Lua <em>escape hatches</em></h3>
           <p>When inference isn't enough, write a handler. Sandboxed, hot-reloaded, with access to request/response/state. Ten lines to make the twin behave exactly right.</p>
           <div class="feat-foot">HOOKS &middot; <span>per-route</span></div>
-        </div>
+        </li>
 
-        <div class="feat">
+        <li class="feat">
           <div class="feat-head">
-            <svg class="feat-icon" viewBox="0 0 28 28" fill="none">
+            <svg class="feat-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true" focusable="false">
               <path d="M16 3 L8 15 L13 15 L11 25 L20 11 L15 11 L17 3 Z" stroke="#7df9ff" stroke-width="1" fill="none" stroke-linejoin="miter"/>
             </svg>
             <span class="feat-num">/05</span>
           </div>
           <h3>Fail like <em>production</em></h3>
-          <p>Inject errors, delays, timeouts, and 429s. Rate-limit by route. All deterministic from a single seed &mdash; same run, same failures, every time.</p>
+          <p>Inject errors, delays, timeouts, and 429s. Rate-limit by route. All deterministic from a single seed, so the same run gets the same failures every time.</p>
           <div class="feat-foot">CHAOS &middot; <span>deterministic</span></div>
-        </div>
+        </li>
 
-        <div class="feat">
+        <li class="feat">
           <div class="feat-head">
-            <svg class="feat-icon" viewBox="0 0 28 28" fill="none">
+            <svg class="feat-icon" viewBox="0 0 28 28" fill="none" aria-hidden="true" focusable="false">
               <rect x="4" y="8" width="6" height="12" stroke="#7df9ff"/>
               <rect x="11" y="4" width="6" height="20" stroke="#7df9ff"/>
               <rect x="18" y="11" width="6" height="9" stroke="#7df9ff"/>
@@ -469,31 +476,31 @@ import Layout from '../layouts/Landing.astro';
           <h3>Machine-readable <em>everything</em></h3>
           <p>Every command emits JSON on demand. Reports, diffs, symbols, state. Drop wraith into CI and let your pipeline reason about it.</p>
           <div class="feat-foot">OUTPUT &middot; <span>--format json</span></div>
-        </div>
-      </div>
+        </li>
+      </ul>
 
-      <div class="protocols">
-        <div class="proto">
+      <ul class="protocols">
+        <li class="proto">
           <div class="name">REST</div>
           <div class="status"><span class="dot"></span> shipped</div>
           <div class="desc">JSON bodies, path params, query routing, RFC 7807 errors.</div>
-        </div>
-        <div class="proto">
+        </li>
+        <li class="proto">
           <div class="name">GraphQL</div>
           <div class="status"><span class="dot"></span> shipped</div>
           <div class="desc">Operation-aware capture, field selection replay, variables-as-holes.</div>
-        </div>
-        <div class="proto">
+        </li>
+        <li class="proto">
           <div class="name">gRPC</div>
           <div class="status"><span class="dot"></span> shipped</div>
           <div class="desc">Unary + server-streaming RPCs. Live frame forwarding, byte-preserving replay, HTTP/2 trailers.</div>
-        </div>
-        <div class="proto">
+        </li>
+        <li class="proto">
           <div class="name">SSE</div>
           <div class="status"><span class="dot"></span> shipped</div>
           <div class="desc">Per-event timing replay, hole rotation, suffix anchoring on terminal sentinels. WebSocket on the roadmap.</div>
-        </div>
-      </div>
+        </li>
+      </ul>
     </div>
   </section>
 
@@ -507,23 +514,54 @@ import Layout from '../layouts/Landing.astro';
         <h2 class="section-title">Why a <em>twin</em>, not a mock.</h2>
       </div>
 
-      <div class="usecases">
-        <div class="usecase">
+      <ul class="usecases">
+        <li class="usecase">
           <div class="uc-tag">FOR AGENTS</div>
           <h3>A service they can drive, not simulate.</h3>
-          <p>Agents do better when the environment behaves. Twins give them a loop they can trust &mdash; every POST persists, every GET returns, rate limits fire when they should.</p>
-        </div>
-        <div class="usecase">
+          <p>Agents do better when the environment behaves. Twins give them a loop they can trust: every POST persists, every GET returns, and rate limits fire when they should.</p>
+        </li>
+        <li class="usecase">
           <div class="uc-tag">FOR TESTS</div>
           <h3>CI that doesn't flake.</h3>
           <p>Point tests at localhost. No rate limits, no auth dance, no shared sandbox stepping on your fixtures. Millisecond replies, every time, forever.</p>
-        </div>
-        <div class="usecase">
+        </li>
+        <li class="usecase">
           <div class="uc-tag">FOR DEMOS</div>
           <h3>An offline copy that still feels alive.</h3>
           <p>Ship a twin with the demo. It's small, deterministic, and behaves like the real thing. Conference wifi has never been a problem again.</p>
-        </div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       FIT / LIMITS
+       ============================================================ -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div class="section-tag">&sect;05 &middot; <span>fit</span></div>
+        <h2 class="section-title">Built for local twins, <em>not</em> every mock job.</h2>
       </div>
+
+      <ul class="fit-list">
+        <li>
+          <strong>Use Wraith when the real API behavior matters.</strong>
+          Record traffic from Stripe-style, GitHub-style, GraphQL, gRPC, or SSE services, then run the verified API mock locally in CI, demos, or agent loops.
+        </li>
+        <li>
+          <strong>Do not use Wraith for a hand-authored mock UI.</strong>
+          If you only need a static example response, a simpler API mocking tool or Postman collection may be the better fit.
+        </li>
+        <li>
+          <strong>Do not treat it as hosted production traffic replay.</strong>
+          Wraith is local-first service virtualization for development and tests, not a managed observability or production replay platform.
+        </li>
+        <li>
+          <strong>Check protocol boundaries before a rollout.</strong>
+          REST, GraphQL, gRPC unary/server-streaming, and SSE are shipped. WebSocket and pure bidirectional streaming remain outside the current fit.
+        </li>
+      </ul>
     </div>
   </section>
 
@@ -535,10 +573,11 @@ import Layout from '../layouts/Landing.astro';
       <div class="cta-box">
         <div>
           <h2>Give your code a service<br />it can actually <em>trust</em>.</h2>
-          <p>Five commands between you and a mock that's been proven correct against the API it shadows.</p>
+          <p>Five commands between you and a recorded-traffic mock that's been proven correct against the API it shadows.</p>
         </div>
         <div class="cta-actions">
-          <a href="/quickstart/" class="btn btn-primary chev">read the quickstart</a>
+          <a href="/quickstart/" class="btn btn-primary chev" data-track="homepage_cta_click">read the quickstart</a>
+          <a href="mailto:info@wraith.cx" class="btn btn-ghost chev" data-track="team_contact_clicked">email info@wraith.cx</a>
         </div>
       </div>
     </div>
@@ -551,7 +590,7 @@ import Layout from '../layouts/Landing.astro';
     <div class="footer-inner">
       <div class="footer-brand">
         <a href="/" class="brand">wra<span class="i">i</span>th</a>
-        <p>Record real API traffic. Run a verified local twin. Develop against a dependable service, not a pile of stubs.</p>
+        <p>Record real API traffic. Run a verified local API mock. Develop against a dependable service, not a pile of stubs.</p>
       </div>
       <div class="footer-col">
         <h4>docs</h4>
@@ -566,18 +605,23 @@ import Layout from '../layouts/Landing.astro';
         <h4>project</h4>
         <ul>
           <li><a href="/changelog/">changelog</a></li>
+          <li><a href="https://github.com/bobisme/wraith-releases">release repo</a></li>
+          <li><a href="/about/">about</a></li>
+          <li><a href="mailto:info@wraith.cx">info@wraith.cx</a></li>
         </ul>
       </div>
       <div class="footer-col">
-        <h4>license</h4>
+        <h4>trust</h4>
         <ul>
           <li><span>Elastic License 2.0</span></li>
+          <li><a href="/privacy/">privacy</a></li>
+          <li><a href="/security/">security</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
       <span>wraith</span>
-      <span>a tool for the real shape of real services</span>
+      <span>Built by <a href="https://bob.cx">Bob</a></span>
     </div>
   </footer>
 
@@ -657,6 +701,22 @@ import Layout from '../layouts/Landing.astro';
     color: var(--ink-mute);
   }
   .install-top span:first-child { color: var(--ghost); }
+  .copy-install {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--ink-mute);
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: uppercase;
+    padding: 0;
+    cursor: pointer;
+  }
+  .copy-install:hover,
+  .copy-install:focus-visible {
+    color: var(--ghost);
+    outline: none;
+  }
   .install-card pre {
     margin: 0;
     padding: 16px 18px;
@@ -781,14 +841,25 @@ import Layout from '../layouts/Landing.astro';
     border-top: 1px solid var(--line);
   }
   .step {
+    appearance: none;
+    width: 100%;
+    background: transparent;
+    color: inherit;
+    text-align: left;
     display: grid; grid-template-columns: 48px 1fr auto;
     gap: 20px; padding: 24px 0;
+    border: 0;
     border-bottom: 1px solid var(--line);
     align-items: center;
     cursor: pointer;
     transition: background .2s;
   }
   .step:hover { background: rgba(255,255,255,.015); }
+  .step:focus-visible {
+    outline: 1px solid var(--ghost);
+    outline-offset: 4px;
+    background: rgba(125,249,255,.05);
+  }
   .step.active {
     background: linear-gradient(90deg, rgba(125,249,255,.08), transparent 70%);
   }
@@ -960,6 +1031,7 @@ import Layout from '../layouts/Landing.astro';
     display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 1px; background: var(--line);
     border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
+    list-style: none; padding: 0; margin: 0;
   }
   .feat {
     background: var(--bg-1);
@@ -1001,6 +1073,7 @@ import Layout from '../layouts/Landing.astro';
     gap: 1px; background: var(--line);
     border: 1px solid var(--line);
     margin-top: 40px;
+    list-style: none; padding: 0;
   }
   .proto {
     background: var(--bg-1); padding: 24px 28px;
@@ -1029,6 +1102,7 @@ import Layout from '../layouts/Landing.astro';
     display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 1px; background: var(--line);
     border: 1px solid var(--line);
+    list-style: none; padding: 0; margin: 0;
   }
   .usecase {
     background: var(--bg-1);
@@ -1049,6 +1123,29 @@ import Layout from '../layouts/Landing.astro';
   .usecase p {
     font-size: 14px; color: var(--ink-mute);
     line-height: 1.55; margin: 0;
+  }
+
+  .fit-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--line);
+    background: var(--line);
+  }
+  .fit-list li {
+    background: var(--bg-1);
+    padding: 28px;
+    color: var(--ink-mute);
+    line-height: 1.6;
+  }
+  .fit-list strong {
+    display: block;
+    color: var(--ink);
+    margin-bottom: 8px;
+    font-weight: 500;
   }
 
   /* =======================================================
@@ -1125,6 +1222,11 @@ import Layout from '../layouts/Landing.astro';
     font-family: var(--font-mono); font-size: 11px;
     color: var(--ink-faint); letter-spacing: .1em;
   }
+  .footer-bottom a {
+    color: var(--ink-dim);
+    text-decoration: none;
+  }
+  .footer-bottom a:hover { color: var(--ghost); }
 
   /* =======================================================
      Responsive
@@ -1133,6 +1235,7 @@ import Layout from '../layouts/Landing.astro';
     .features { grid-template-columns: repeat(2, 1fr); }
     .usecases { grid-template-columns: 1fr; }
     .protocols { grid-template-columns: repeat(2, 1fr); }
+    .fit-list { grid-template-columns: 1fr; }
     .section-head { grid-template-columns: 1fr; gap: 16px; }
   }
 
@@ -1269,6 +1372,7 @@ import Layout from '../layouts/Landing.astro';
     function renderStep(idx) {
       document.querySelectorAll('.step').forEach((el, i) => {
         el.classList.toggle('active', i === idx);
+        el.setAttribute('aria-pressed', String(i === idx));
       });
       const modeEl = document.getElementById('vizMode');
       if (modeEl) modeEl.textContent = TERM_SCRIPTS[idx].mode;
@@ -1386,6 +1490,20 @@ import Layout from '../layouts/Landing.astro';
     // Click step rows to jump
     document.querySelectorAll('.step').forEach(el => {
       el.addEventListener('click', () => gotoStep(Number(el.dataset.i)));
+    });
+
+    document.querySelectorAll('[data-copy-install]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const command = 'curl -fsSL https://wraith.cx/install.sh | sh';
+        try {
+          await navigator.clipboard.writeText(command);
+          button.textContent = 'copied';
+        } catch {
+          button.textContent = 'copy failed';
+        }
+        window.wraithTrack?.('install_command_copy', { source: 'homepage_install_card' });
+        setTimeout(() => { button.textContent = 'copy command'; }, 1800);
+      });
     });
 
     // ---- Build tape rows and conformance grid once ----

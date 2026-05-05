@@ -4,7 +4,55 @@
    Instrument Serif headings, JetBrains Mono for code/labels.
    ======================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/instrument-serif-regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/instrument-serif-italic.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-400.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/jetbrains-mono-600.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-400.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-500.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/space-grotesk-600.ttf') format('truetype');
+}
 
 /* =======================================================
    Design tokens + Starlight overrides
@@ -23,8 +71,8 @@
 
   --w-ink: #e7ecf3;
   --w-ink-dim: #9ba6b6;
-  --w-ink-mute: #6b7789;
-  --w-ink-faint: #454f5e;
+  --w-ink-mute: #7d899b;
+  --w-ink-faint: #687485;
 
   --w-ghost: #7df9ff;
   --w-ghost-2: #a78bfa;
@@ -54,8 +102,8 @@
   --sl-color-white: #e7ecf3;
   --sl-color-gray-1: #cfd6df;
   --sl-color-gray-2: #9ba6b6;
-  --sl-color-gray-3: #6b7789;
-  --sl-color-gray-4: #454f5e;
+  --sl-color-gray-3: #7d899b;
+  --sl-color-gray-4: #687485;
   --sl-color-gray-5: #2a3240;
   --sl-color-gray-6: #171c25;
   --sl-color-gray-7: #11151c;
@@ -252,7 +300,8 @@ nav.sidebar a[aria-current='page']:hover {
 /* =======================================================
    Right TOC
    ======================================================= */
-starlight-toc nav > h2 {
+starlight-toc nav > h2,
+starlight-toc .toc-label {
   font-family: var(--w-font-mono);
   font-size: 10px;
   letter-spacing: 0.2em;

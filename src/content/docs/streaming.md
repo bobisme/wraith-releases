@@ -1,12 +1,12 @@
 ---
-title: Streaming
-description: "Twin SSE and gRPC server-streaming APIs end-to-end: record, synthesize, serve, check"
+title: Mock SSE and gRPC streaming APIs locally
+description: "Record, synthesize, serve, and conformance-check SSE and gRPC server-streaming APIs with deterministic local Wraith twins."
 ---
 
 `wraith` records, synthesizes, serves, and conformance-checks streaming APIs the same way it does unary REST. Two wire formats are first-class:
 
-- **SSE** (`text/event-stream`) — LLM chat completions, change feeds, server-pushed updates.
-- **gRPC server-streaming** — etcd `Watch`, change-data-capture, long-poll-shaped RPCs. (Bidirectional gRPC is recorded server-streaming-style: client open + N server messages + close.)
+- **SSE** (`text/event-stream`): LLM chat completions, change feeds, server-pushed updates.
+- **gRPC server-streaming**: etcd `Watch`, change-data-capture, long-poll-shaped RPCs. (Bidirectional gRPC is recorded server-streaming-style: client open + N server messages + close.)
 
 The pitch: **twin your LLM streaming for $0 in CI; twin your watch RPC for local dev**. Pointing your client at the served twin gives you deterministic, fast, faithful streaming responses without paying the upstream API or running its infrastructure.
 
@@ -25,7 +25,7 @@ wraith synth my-llm
 wraith serve my-llm --port 8091
 ```
 
-The served twin emits a real SSE stream — `data: {...}\n\n` frames at realistic per-event intervals — that any OpenAI-compat client (Python `openai`, `httpx`, raw curl) consumes natively.
+The served twin emits a real SSE stream with `data: {...}\n\n` frames at realistic per-event intervals that any OpenAI-compat client (Python `openai`, `httpx`, raw curl) consumes natively.
 
 ## Quickstart: gRPC server-streaming
 
@@ -61,7 +61,7 @@ Per [streaming-design §F.3], a streaming exchange passes when:
 
 - Event count matches the recording exactly (per-recording target length).
 - Per-event structural shape matches: keys present, types agree, constants exact-match.
-- Hole-marked fields tolerate value variance (LLM token text, etcd event keys — these legitimately differ per request).
+- Hole-marked fields tolerate value variance (LLM token text and etcd event keys legitimately differ per request).
 - Termination shape matches (clean / truncated / error).
 - gRPC trailers compare via header allowlist (`grpc-status`, `grpc-message`).
 - Per-event timing is within the synthesized p99 band (warning, not failure).
@@ -70,7 +70,7 @@ The hybrid model means an LLM stream emitting different tokens on each replay st
 
 ## Verifying honesty: the tamper test
 
-The cheapest way to confirm a twin's check is genuinely catching divergences (not silently passing):
+A direct way to confirm a twin's check is genuinely catching divergences (not silently passing):
 
 ```sh
 # Capture baseline
@@ -80,14 +80,14 @@ wraith check my-llm --in-memory --format json | jq '.conformance.divergence_coun
 cp twins/my-llm/model/symbols.json /tmp/baseline.json
 # Edit symbols.json: change a known Constant value (e.g. an event_type)
 
-# Re-check — divergences should fire at the tampered position
+# Re-check. Divergences should fire at the tampered position
 wraith check my-llm --in-memory --format json --show-suppressed
 
 # Restore
 cp /tmp/baseline.json twins/my-llm/model/symbols.json
 ```
 
-If the tampered run shows the same divergence count as baseline, the diff is vacuous somewhere — file an issue. With wraith's streaming pipeline, tamper divergences localize byte-exactly to the path you changed.
+If the tampered run shows the same divergence count as baseline, the diff is vacuous somewhere. File an issue. With wraith's streaming pipeline, tamper divergences localize byte-exactly to the path you changed.
 
 ## What gets synthesized
 
@@ -95,7 +95,7 @@ For each streaming route:
 
 - **Stream template**: prefix events (fixed-position-from-start) + middle bucket (variable-length, anti-unified into one or more shapes) + suffix events (fixed-position-from-end, e.g. SSE `[DONE]` sentinel, gRPC closing message). Per-recording target length used at replay so 11-event and 22-event recordings each compare against their exact length.
 - **Per-event holes**: fields that vary across recordings classified as holes. Hole values rotate through observed examples at replay (so an LLM stream emits the recorded token sequence, not "CCCCC" repeated).
-- **Termination**: gRPC streams without trailers classify as `Truncated` (matches reality — long-lived bidi streams cancelled by client deadline never write trailers).
+- **Termination**: gRPC streams without trailers classify as `Truncated` (matches reality; long-lived bidi streams cancelled by client deadline never write trailers).
 - **Per-variant**: streaming and non-streaming variants of the same route are split. The `200` SSE variant gets a stream template; the `404 invalid-model` JSON variant doesn't. Variant routing at serve time picks the more-specific guard, so a request matching a body-field discriminator (e.g. `model="badmodel"`) routes to the error path.
 
 ## Wire format details
@@ -106,9 +106,9 @@ The recorder parses `text/event-stream` per the [W3C SSE spec]. `data:` lines ar
 
 ### gRPC
 
-The recorder captures HTTP/2 `Frame<Bytes>` items live (no buffering — long-lived watches don't deadlock). Server-direction `Data` frames become `WrecFrame::Data`; `Trailers` map to the WREC's `trailers` slot. The serve path emits length-prefixed protobuf bytes plus an HTTP/2 `Trailer` frame with `grpc-status` and (on errors) `grpc-message`.
+The recorder captures HTTP/2 `Frame<Bytes>` items live, with no buffering, so long-lived watches don't deadlock. Server-direction `Data` frames become `WrecFrame::Data`; `Trailers` map to the WREC's `trailers` slot. The serve path emits length-prefixed protobuf bytes plus an HTTP/2 `Trailer` frame with `grpc-status` and (on errors) `grpc-message`.
 
-Bidirectional methods like etcd `Watch` are accepted as server-streaming for capture purposes — the recorder skips client-direction frames in the projection. Pure bidi (interleaved client/server messages) isn't yet supported as a distinct shape.
+Bidirectional methods like etcd `Watch` are accepted as server-streaming for capture purposes. The recorder skips client-direction frames in the projection. Pure bidi (interleaved client/server messages) isn't yet supported as a distinct shape.
 
 ## Currently out of scope
 

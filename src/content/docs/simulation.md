@@ -1,9 +1,9 @@
 ---
-title: Simulation
+title: Simulate API failures locally with Wraith
 description: "Turn your twin into a chaos lab: fault injection, latency, rate limiting, and trace endpoints"
 ---
 
-A twin that always returns 200s at 0ms is a liar. Real APIs rate-limit, time out, return 500s under load, and take 300ms when they feel like it. `wraith serve` can simulate all of this -- deterministically, per route, with a shared RNG seed so the same seed produces the same fault sequence every time.
+A twin that always returns 200s at 0ms is a liar. Real APIs rate-limit, time out, return 500s under load, and take 300ms when they feel like it. `wraith serve` can simulate all of this - deterministically, per route, with a shared RNG seed so the same seed produces the same fault sequence every time.
 
 There are three simulation layers plus a trace endpoint for observability:
 
@@ -16,7 +16,7 @@ incoming request
   -> trace        (optional ring buffer for inspection)
 ```
 
-All four are opt-in. With no flags set, `wraith serve` has zero simulation overhead -- no allocation, no locking, no wrapper calls.
+All four are opt-in. With no flags set, `wraith serve` has zero simulation overhead - no allocation, no locking, no wrapper calls.
 
 ## Fault injection
 
@@ -106,7 +106,7 @@ Six modes, picked with `--latency-mode`:
 
 | Mode         | Flags                                                      |
 |--------------|------------------------------------------------------------|
-| `none`       | (default -- no latency added)                              |
+| `none`       | (default - no latency added)                              |
 | `fixed`      | `--latency-ms <ms>`                                        |
 | `uniform`    | `--latency-min-ms <ms> --latency-max-ms <ms>`              |
 | `percentile` | `--latency-p50 <ms> --latency-p95 <ms> --latency-p99 <ms>` |
@@ -184,7 +184,7 @@ Content-Type: application/json
 {"error":"rate limited"}
 ```
 
-The exact same response shape is produced by `fault_type = "throttle"` -- they share a single builder (`runtime/http_util.rs`).
+The exact same response shape is produced by `fault_type = "throttle"` - they share a single builder (`runtime/http_util.rs`).
 
 ### Algorithms
 
@@ -211,7 +211,7 @@ POST /__wraith/trace/reset       # clear the buffer
 
 Each trace records method, path + query, status, duration (us), timestamp, and session id (from `x-wraith-session` header, falling back to `"default"`). Capacity bounds the ring; older entries are evicted FIFO.
 
-Trace endpoints are gated by the same auth policy as the rest of `/__wraith/*` when you bind to a non-loopback interface (see [Configuration](/configuration/#control-plane-auth)). They are **off by default** -- no overhead when `--trace` is absent.
+Trace endpoints are gated by the same auth policy as the rest of `/__wraith/*` when you bind to a non-loopback interface (see [Configuration](/configuration/#hmac-key-management)). They are **off by default** - no overhead when `--trace` is absent.
 
 ## Putting it together
 

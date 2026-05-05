@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://wraith.cx/sitemap-index.xml

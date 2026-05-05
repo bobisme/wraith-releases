@@ -1,8 +1,58 @@
 ---
 interface Props {
   title: string;
+  description?: string;
 }
-const { title } = Astro.props;
+const {
+  title,
+  description = 'API mocking from recorded traffic. Wraith records real API calls, synthesizes a deterministic local twin, and verifies it against the real thing.',
+} = Astro.props;
+const canonical = new URL(Astro.url.pathname, 'https://wraith.cx').toString();
+const siteRoot = 'https://wraith.cx/';
+const socialImage = 'https://wraith.cx/social-card.png';
+const latestVersion = '0.5.2';
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'wraith',
+    url: siteRoot,
+    description,
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: ['Linux', 'macOS'],
+    softwareVersion: latestVersion,
+    license: 'https://www.elastic.co/licensing/elastic-license',
+    installUrl: 'https://wraith.cx/install.sh',
+    releaseNotes: 'https://wraith.cx/changelog/',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'wraith',
+    url: siteRoot,
+    logo: 'https://wraith.cx/icon-512.png',
+    email: 'mailto:info@wraith.cx',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      email: 'info@wraith.cx',
+      contactType: 'customer support',
+    },
+    sameAs: ['https://github.com/bobisme/wraith-releases', 'https://bob.cx/'],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'wraith',
+    url: siteRoot,
+    description,
+  },
+];
 ---
 <!doctype html>
 <html lang="en" data-theme="dark">
@@ -11,14 +61,30 @@ const { title } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
-    <meta name="description" content="Record any API. Synthesize a deterministic local twin. Keep it aligned automatically as upstream APIs drift. No spec required." />
-    <link rel="canonical" href="https://wraith.cx" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="preload" href="/fonts/instrument-serif-regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/fonts/space-grotesk-400.ttf" as="font" type="font/ttf" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>
   <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     <div class="grid-wash"></div>
     <div class="spectral-wash"></div>
 
@@ -34,9 +100,39 @@ const { title } = Astro.props;
       </div>
     </nav>
 
-    <main class="page">
+    <main class="page" id="main">
       <slot />
     </main>
+    <script>
+      (() => {
+        const endpoint = document.documentElement.dataset.analyticsEndpoint || '';
+        const queue = [];
+        const send = (name, props = {}) => {
+          const payload = {
+            name,
+            path: location.pathname,
+            referrer: document.referrer || '',
+            props,
+            ts: new Date().toISOString(),
+          };
+          queue.push(payload);
+          window.dispatchEvent(new CustomEvent('wraith:analytics', { detail: payload }));
+          if (endpoint && navigator.sendBeacon) {
+            navigator.sendBeacon(endpoint, JSON.stringify(payload));
+          }
+        };
+        window.wraithTrack = send;
+        send('landing_viewed');
+        document.addEventListener('click', (event) => {
+          const target = event.target instanceof Element ? event.target.closest('[data-track]') : null;
+          if (!target) return;
+          send(target.getAttribute('data-track') || 'cta_click', {
+            label: target.textContent?.trim() || '',
+            href: target.getAttribute('href') || '',
+          });
+        });
+      })();
+    </script>
   </body>
 </html>
 
@@ -44,6 +140,56 @@ const { title } = Astro.props;
   /* =======================================================
      wraith — ghostly-technical design tokens
      ======================================================= */
+  @font-face {
+    font-family: 'Instrument Serif';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/instrument-serif-regular.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Instrument Serif';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/instrument-serif-italic.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/space-grotesk-400.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url('/fonts/space-grotesk-500.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/space-grotesk-600.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/jetbrains-mono-400.ttf') format('truetype');
+  }
+  @font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/fonts/jetbrains-mono-600.ttf') format('truetype');
+  }
+
   :root {
     /* Surfaces — cool near-black with a whisper of blue */
     --bg: #07090c;
@@ -57,8 +203,8 @@ const { title } = Astro.props;
     /* Text */
     --ink: #e7ecf3;
     --ink-dim: #9ba6b6;
-    --ink-mute: #6b7789;
-    --ink-faint: #454f5e;
+    --ink-mute: #7d899b;
+    --ink-faint: #687485;
 
     /* Accent — spectral cyan → violet */
     --ghost: #7df9ff;
@@ -116,6 +262,22 @@ const { title } = Astro.props;
   }
 
   .page { position: relative; z-index: 1; }
+  .skip-link {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 100;
+    transform: translateY(-140%);
+    background: var(--ghost);
+    color: #041015;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    transition: transform .15s ease;
+  }
+  .skip-link:focus { transform: translateY(0); }
 
   ::selection { background: rgba(125,249,255,.25); color: #fff; }
 
@@ -145,6 +307,7 @@ const { title } = Astro.props;
     cursor: pointer;
     border: 1px solid transparent;
     line-height: 1;
+    min-height: 44px;
   }
   .btn-primary {
     background: var(--ghost);
@@ -203,12 +366,14 @@ const { title } = Astro.props;
     50% { opacity: 0.55; }
   }
   nav.top .links {
-    display: flex; gap: 4px; align-items: center;
+    display: flex; gap: 8px; align-items: center;
   }
   nav.top .links a {
     font-family: var(--font-mono); font-size: 13px;
     color: var(--ink-dim); text-decoration: none;
-    padding: 6px 12px; border-radius: 2px;
+    min-height: 44px; min-width: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 10px 12px; border-radius: 2px;
   }
   nav.top .links a:hover { color: var(--ghost); background: var(--bg-2); }
   nav.top .links .version {
@@ -226,11 +391,84 @@ const { title } = Astro.props;
 
   @media (max-width: 900px) {
     nav.top .top-inner { padding: 12px 24px; }
-    nav.top .links { gap: 2px; }
-    nav.top .links a:not(.gh) { padding: 6px 8px; font-size: 12px; }
+    nav.top .links { gap: 6px; }
+    nav.top .links a:not(.gh) { padding: 10px 8px; font-size: 12px; }
     nav.top .links .version { display: none; }
   }
   @media (max-width: 640px) {
     nav.top .links a:not(.gh):not([href="/quickstart/"]) { display: none; }
+  }
+
+  .content-page {
+    padding: 92px 0 96px;
+  }
+  .content-page .content-shell {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 0 48px;
+  }
+  .content-page .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--ink-mute);
+    margin-bottom: 28px;
+  }
+  .content-page .eyebrow::before {
+    content: ''; width: 24px; height: 1px; background: var(--ghost);
+  }
+  .content-page h1 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: clamp(44px, 7vw, 78px);
+    line-height: 1;
+    letter-spacing: -.025em;
+    margin: 0 0 24px;
+    color: var(--ink);
+  }
+  .content-page .lead {
+    font-size: 19px;
+    line-height: 1.6;
+    max-width: 62ch;
+    color: var(--ink-dim);
+    margin: 0 0 56px;
+  }
+  .content-page h2 {
+    font-family: var(--font-serif);
+    font-size: 36px;
+    font-weight: 400;
+    line-height: 1.12;
+    margin: 48px 0 14px;
+    color: var(--ink);
+  }
+  .content-page p,
+  .content-page li {
+    color: var(--ink-dim);
+    line-height: 1.65;
+  }
+  .content-page a { color: var(--ghost); }
+  .content-page code {
+    color: var(--ghost);
+    font-family: var(--font-mono);
+  }
+  .content-page .note-list {
+    display: grid;
+    gap: 1px;
+    padding: 0;
+    margin: 28px 0 0;
+    list-style: none;
+    border: 1px solid var(--line);
+    background: var(--line);
+  }
+  .content-page .note-list li {
+    background: var(--bg-1);
+    padding: 22px 24px;
+  }
+  .content-page .note-list strong {
+    color: var(--ink);
+    display: block;
+    margin-bottom: 4px;
+  }
+  @media (max-width: 720px) {
+    .content-page .content-shell { padding: 0 24px; }
   }
 </style>

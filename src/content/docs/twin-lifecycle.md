@@ -1,7 +1,23 @@
 ---
-title: Twin Lifecycle
-description: "Full workflow: record, synthesize, verify, repair, serve"
+title: Wraith API twin lifecycle
+description: "Learn the full recorded-traffic API mocking workflow: record, synthesize, verify conformance, repair drift, and serve a local twin."
 ---
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "Wraith API twin lifecycle",
+  "description": "Record, synthesize, verify, repair, and serve a local API twin with Wraith.",
+  "step": [
+    {"@type": "HowToStep", "name": "Record", "text": "Capture real API exchanges through the local Wraith proxy."},
+    {"@type": "HowToStep", "name": "Synthesize", "text": "Build a deterministic model from all recorded sessions."},
+    {"@type": "HowToStep", "name": "Check conformance", "text": "Replay recorded exchanges through the synthesized model and inspect divergences."},
+    {"@type": "HowToStep", "name": "Repair", "text": "Use generated fixes or Lua handlers for routes the engine cannot infer."},
+    {"@type": "HowToStep", "name": "Serve", "text": "Run the local twin and point tests, demos, or agents at it."}
+  ]
+}
+</script>
 
 This guide covers the full workflow for building and maintaining an API twin, from first recording to production-quality service.
 
@@ -65,7 +81,7 @@ During recording, the proxy exposes control endpoints at `/__wraith/*`:
 | `/__wraith/info` | GET | Active sessions, upstream URL, port |
 | `/__wraith/new-session` | POST | Force session boundary |
 
-These are intercepted before proxying -- they never reach the upstream API.
+These are intercepted before proxying - they never reach the upstream API.
 
 ### Session tagging
 
@@ -88,7 +104,7 @@ Build a deterministic model from all recorded sessions:
 wraith synth stripe
 ```
 
-This produces `twins/stripe/model/symbols.json` -- the WIR (Wraith Intermediate Representation) containing:
+This produces `twins/stripe/model/symbols.json` - the WIR (Wraith Intermediate Representation) containing:
 - Route patterns with parameterized paths
 - Response templates with typed holes (dynamic fields)
 - Variants per status code (200, 404, etc.)
@@ -105,7 +121,7 @@ synth  stripe  25 routes  3544 symbols  22 state-ops
 wraith detects GraphQL endpoints automatically (`POST /graphql` with `query` field). It splits the single route into per-operation variants using `operationName` or parsed query root field:
 
 ```
-detected GraphQL endpoint -- splitting by operation  route=POST /graphql  exchanges=257
+detected GraphQL endpoint - splitting by operation  route=POST /graphql  exchanges=257
 GraphQL operation groups: AddComment, CloseIssue, CreateIssue, ...  operations=16
 ```
 
@@ -124,11 +140,11 @@ PASS  stripe  10000/10000  sessions=3/3  divergences=0
 ```
 
 The score is in basis points (10000 = perfect). Divergences show where the model differs from recordings:
-- `missing_field` -- recording has a field the model doesn't produce
-- `extra_field` -- model produces a field the recording doesn't have
-- `value_mismatch` -- field exists but value differs
-- `status_mismatch` -- HTTP status code differs
-- `type_mismatch` -- response body type differs
+- `missing_field` - recording has a field the model doesn't produce
+- `extra_field` - model produces a field the recording doesn't have
+- `value_mismatch` - field exists but value differs
+- `status_mismatch` - HTTP status code differs
+- `type_mismatch` - response body type differs
 
 ### Understanding suppressions
 
@@ -154,10 +170,10 @@ PASS  stripe  10000/10000  sessions=3/3  divergences=0 (264 suppressed)
 ```
 
 Suppression reasons:
-- **generated** -- dynamic field (IDs, random values), compared by type only
-- **timestamp** -- time-like field, compared by type only
-- **header_allowlist** -- header not in the 3-header comparison list
-- **heuristic** -- field name pattern (`*_at`, `*_count`) with matching types
+- **generated** - dynamic field (IDs, random values), compared by type only
+- **timestamp** - time-like field, compared by type only
+- **header_allowlist** - header not in the 3-header comparison list
+- **heuristic** - field name pattern (`*_at`, `*_count`) with matching types
 
 ### Forcing comparison
 
@@ -165,7 +181,7 @@ If a suppressed field matters to you, force comparison in `wraith.toml`:
 
 ```toml
 [diff.fields]
-# These fields are computed -- compare exactly, don't suppress
+# These fields are computed - compare exactly, don't suppress
 "total" = { classify = "constant" }
 "summary.total_value" = { classify = "constant" }
 "customer_name" = { classify = "constant" }
@@ -196,7 +212,7 @@ wraith generate stripe --max-iterations 10   # fix up to 10 routes
 wraith generate stripe --provider openrouter --model anthropic/claude-sonnet  # cloud model
 ```
 
-The regression guard ensures no fix makes things worse -- both per-route and globally.
+The regression guard ensures no fix makes things worse - both per-route and globally.
 
 ## 5. Lua handlers
 
@@ -210,7 +226,7 @@ engine can't express. Drop into Lua when you need:
 - **Custom formatting**: non-standard date formats, encoded cursors
 
 If a Lua handler fails (compile error, runtime error, timeout), the synth engine
-takes over as fallback — Lua never breaks the twin, so it's safe to layer on
+takes over as fallback. Lua never breaks the twin, so it's safe to layer on
 incrementally.
 
 ### Directory layout
@@ -229,7 +245,7 @@ twins/myapi/lua/
 
 ```lua
 -- twins/myapi/lua/handlers/create_order.lua
--- Handles POST /orders -- computes total from line items
+-- Handles POST /orders - computes total from line items
 
 local json = wraith.import("json")
 local body = json.decode(req.body)
@@ -267,43 +283,43 @@ emit.json(order)
 
 **Request context** (read-only):
 ```lua
-req.method       -- "GET", "POST", etc.
-req.path         -- "/orders/ord_123"
-req.headers      -- {["content-type"] = "application/json", ...}
-req.query        -- {["limit"] = "10", ...}
-req.body         -- request body string, or nil
+req.method       - "GET", "POST", etc.
+req.path         - "/orders/ord_123"
+req.headers      - {["content-type"] = "application/json", ...}
+req.query        - {["limit"] = "10", ...}
+req.body         - request body string, or nil
 ```
 
 **State store** (persistent across requests within a session):
 ```lua
-state.get(type, id)           -- read entity, returns table or nil
-state.put(type, id, data)     -- create or update entity
-state.delete(type, id)        -- delete entity
-state.list(type)              -- all entities of type
-state.query(type, field, val) -- filter by field equality
-state.count(type)             -- count entities
-state.counter(name)           -- atomic increment, returns new value
+state.get(type, id)           - read entity, returns table or nil
+state.put(type, id, data)     - create or update entity
+state.delete(type, id)        - delete entity
+state.list(type)              - all entities of type
+state.query(type, field, val) - filter by field equality
+state.count(type)             - count entities
+state.counter(name)           - atomic increment, returns new value
 ```
 
 **Deterministic clock**:
 ```lua
-clock.now()          -- Unix timestamp (deterministic per session)
-clock.advance(secs)  -- advance clock (default: 1 second)
+clock.now()          - Unix timestamp (deterministic per session)
+clock.advance(secs)  - advance clock (default: 1 second)
 ```
 
 **Response builder**:
 ```lua
-emit.status(201)                           -- HTTP status code
-emit.header("x-custom", "value")           -- add response header
-emit.json({id = "123", name = "test"})     -- JSON body (from table)
-emit.body('{"raw": "json string"}')        -- raw body string
-emit.error(404, "not_found", "message")    -- shorthand error response
+emit.status(201)                           - HTTP status code
+emit.header("x-custom", "value")           - add response header
+emit.json({id = "123", name = "test"})     - JSON body (from table)
+emit.body('{"raw": "json string"}')        - raw body string
+emit.error(404, "not_found", "message")    - shorthand error response
 ```
 
 **Module system**:
 ```lua
-local json = wraith.import("json")    -- load lua/lib/json.lua
-local utils = wraith.import("utils")  -- load lua/lib/utils.lua
+local json = wraith.import("json")    - load lua/lib/json.lua
+local utils = wraith.import("utils")  - load lua/lib/utils.lua
 ```
 
 ### Connecting handlers to routes
@@ -325,7 +341,7 @@ Set `lua_hook` on the variant in `symbols.json`:
 
 The handler name matches the filename without extension: `create_order` -> `handlers/create_order.lua`.
 
-If the Lua handler succeeds, its response is used directly. If it fails (error, timeout, missing file), the synth engine takes over as fallback -- Lua never breaks the twin.
+If the Lua handler succeeds, its response is used directly. If it fails (error, timeout, missing file), the synth engine takes over as fallback - Lua never breaks the twin.
 
 ### Resource limits
 
@@ -382,7 +398,7 @@ wraith server started  twin=stripe  addr=127.0.0.1:8081  fidelity=synth
 
 Point your test suite at `http://localhost:8081`. The server:
 - Matches requests to routes via the path trie
-- Selects the best variant based on guards
+- Selects the matching variant based on guards
 - Runs Lua handler if `lua_hook` is set on the variant
 - Otherwise renders from the synth template with hole replacement
 - Manages per-session state (entities, counters, clock)
@@ -409,7 +425,7 @@ Each cycle:
 - Lua handlers fill gaps the engine can't close
 - `--show-suppressed` shows what the engine is hiding so you know where Lua is needed
 
-Track progress with `wraith check --in-memory` -- the session pass rate is the key metric.
+Track progress with `wraith check --in-memory` - the session pass rate is the key metric.
 
 ## Deciding between engine, generate, and Lua
 

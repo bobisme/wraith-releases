@@ -1,6 +1,6 @@
 ---
-title: Configuration Reference
-description: All wraith.toml, scrub.toml, and drift.toml settings
+title: Configure Wraith API twins and scrubbing rules
+description: Reference every wraith.toml, scrub.toml, and drift.toml setting for local API twins, scrubbing, drift handling, and serving behavior.
 ---
 
 Wraith uses TOML files per twin workspace to control behaviour, security policy, and drift handling.
@@ -26,9 +26,9 @@ Runtime simulation (fault injection, latency, rate limiting, tracing) is configu
 
 | Field      | Type   | Default | Description                                  |
 |------------|--------|---------|----------------------------------------------|
-| `name`     | string | --       | Twin name (directory name under `twins/`)    |
-| `base_url` | string | --       | Upstream API base URL                        |
-| `spec`     | string | --       | Optional path to OpenAPI spec                |
+| `name`     | string | required | Twin name (directory name under `twins/`)    |
+| `base_url` | string | required | Upstream API base URL                        |
+| `spec`     | string | not set  | Optional path to OpenAPI spec                |
 
 ### `[proxy]`
 
@@ -102,7 +102,7 @@ body_values = 0.95
 
 ### `[diff.fields."<json_path>"]`
 
-Override field classifications for specific JSON paths. Use hole-style paths (no `body.` prefix -- it's added automatically).
+Override field classifications for specific JSON paths. Use hole-style paths (no `body.` prefix - it's added automatically).
 
 | Field      | Type   | Required | Description                                     |
 |------------|--------|----------|-------------------------------------------------|
@@ -201,7 +201,7 @@ Suppressed divergences are excluded from scoring but listed by `--show-suppresse
 
 | Field            | Type     | Default | Description                          |
 |------------------|----------|---------|--------------------------------------|
-| `default_runner` | string?  | --       | Default LLM runner name              |
+| `default_runner` | string?  | not set  | Default LLM runner name              |
 | `fallback`       | string[] | `[]`    | Fallback runner chain                |
 | `air_gapped`     | bool     | `false` | Disable all network-based runners    |
 
@@ -209,9 +209,9 @@ Suppressed divergences are excluded from scoring but listed by `--show-suppresse
 
 | Field     | Type     | Default | Description                     |
 |-----------|----------|---------|---------------------------------|
-| `command` | string   | --       | Runner executable               |
+| `command` | string   | required | Runner executable               |
 | `args`    | string[] | `[]`    | Command-line arguments          |
-| `format`  | string?  | --       | Output format (`json`, etc.)    |
+| `format`  | string?  | not set  | Output format (`json`, etc.)    |
 
 ### `[refresh]`
 
@@ -381,4 +381,4 @@ reason = "upstream adds new enum values often; not a schema break"
 - Set `WRAITH_HMAC_KEY` to any secret string for reproducible tokens across sessions
 - Without it, wraith generates an ephemeral key (tokens differ between runs)
 - In CI (`CI=true`), a missing key causes exit code 3 (security violation)
-- Never commit the key to version control -- `wraith doctor` checks for this
+- Never commit the key to version control - `wraith doctor` checks for this

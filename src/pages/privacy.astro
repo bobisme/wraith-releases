@@ -1,0 +1,32 @@
+---
+import Layout from '../layouts/Landing.astro';
+---
+
+<Layout title="wraith privacy -- local-first recorded API traffic" description="Privacy posture for Wraith: recorded API traffic stays local by default, secrets are scrubbed before disk, and telemetry is explicit rather than hidden.">
+  <section class="content-page">
+    <div class="content-shell">
+      <div class="eyebrow">privacy</div>
+      <h1>Recorded traffic stays local by default.</h1>
+      <p class="lead">Wraith is a local developer tool for API mocking from recorded traffic. The privacy rule is simple: your recordings, scrub rules, synthesized models, reports, and local twins live in your workspace unless you explicitly share them.</p>
+
+      <h2>What Wraith writes locally</h2>
+      <ul class="note-list">
+        <li><strong>Recordings</strong> API exchanges are written as WREC files inside the twin workspace after scrubbing rules run.</li>
+        <li><strong>Models</strong> Synthesized symbols, state, route metadata, and conformance reports stay in the local `twins/&lt;name&gt;/` directory.</li>
+        <li><strong>Trace logs</strong> Runtime trace buffers exist only when `wraith serve --trace` is enabled.</li>
+      </ul>
+
+      <h2>Scrubbing and secrets</h2>
+      <p>Wraith applies header redaction, body pattern matching, and user-configured scrub rules before recordings hit disk. Treat scrub configuration as a safety layer, not a substitute for reviewing the data you choose to record. If an API carries unusual secret formats, add explicit rules in `scrub.toml` before recording.</p>
+
+      <h2>Telemetry</h2>
+      <p>The public website may measure page views, CTA clicks, docs search, install command copies, and `/install.sh` requests so the project can learn whether visitors reach the quickstart and install path. Wraith CLI product telemetry should remain off unless explicitly documented and enabled by the user.</p>
+
+      <h2>Retention and deletion</h2>
+      <p>Local recordings and models are deleted when you delete the twin workspace. Website logs, if enabled by the hosting provider or analytics setup, should be treated as operational logs and retained only as long as needed to understand acquisition and install health.</p>
+
+      <h2>Contact</h2>
+      <p>Questions about data handling, security, or team evaluation can go to <a href="mailto:info@wraith.cx">info@wraith.cx</a>.</p>
+    </div>
+  </section>
+</Layout>

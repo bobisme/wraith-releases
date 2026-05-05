@@ -1,0 +1,45 @@
+# wraith
+
+Wraith is a local-first developer tool for API mocking from recorded traffic. It records real API calls, synthesizes a deterministic local twin, and verifies the twin against the original recordings before tests, demos, or agents rely on it.
+
+## Canonical URLs
+
+- Homepage: https://wraith.cx/
+- Quickstart: https://wraith.cx/quickstart/
+- Installation: https://wraith.cx/installation/
+- Twin lifecycle: https://wraith.cx/twin-lifecycle/
+- Streaming APIs: https://wraith.cx/streaming/
+- Simulation: https://wraith.cx/simulation/
+- OpenAPI seed mode: https://wraith.cx/openapi/
+- Configuration: https://wraith.cx/configuration/
+- Changelog: https://wraith.cx/changelog/
+- Privacy: https://wraith.cx/privacy/
+- Security: https://wraith.cx/security/
+- Contact: https://wraith.cx/contact/
+- Email: info@wraith.cx
+- Built by Bob: https://bob.cx/
+
+## Install
+
+```sh
+curl -fsSL https://wraith.cx/install.sh | sh
+```
+
+Use `WRAITH_VERSION` to pin a public release.
+
+## Current release
+
+Latest documented release: v0.5.2, published 2026-05-01.
+
+## License
+
+Wraith release binaries are distributed under Elastic License 2.0.
+
+## Core claims
+
+- Record real API traffic through a local proxy.
+- Scrub secrets before recordings hit disk.
+- Synthesize deterministic, stateful local API twins.
+- Check conformance against original recordings.
+- Serve local twins for CI, local development, demos, and agent environments.
+- Supports REST, GraphQL, gRPC unary/server-streaming, and SSE. WebSocket is not first-class yet.

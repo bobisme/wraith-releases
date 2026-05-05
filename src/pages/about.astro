@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Landing.astro';
+---
+
+<Layout title="about wraith -- verified local API twins" description="About Wraith, a local-first developer tool for recorded-traffic API mocking and verified local API twins.">
+  <section class="content-page">
+    <div class="content-shell">
+      <div class="eyebrow">about</div>
+      <h1>A local service your tests can trust.</h1>
+      <p class="lead">Wraith exists because hand-written stubs, stale mock servers, and shared API sandboxes are not dependable enough for integration-heavy development. It records real behavior, synthesizes a local twin, and checks that twin before you trust it.</p>
+
+      <h2>Builder</h2>
+      <p>Wraith is built by <a href="https://bob.cx">Bob</a>. Public release provenance and install issues live in <a href="https://github.com/bobisme/wraith-releases">bobisme/wraith-releases</a>.</p>
+
+      <h2>Contact</h2>
+      <p>For team evaluation, support, or a use case that needs review, email <a href="mailto:info@wraith.cx">info@wraith.cx</a>.</p>
+
+      <h2>Project posture</h2>
+      <ul class="note-list">
+        <li><strong>Local-first</strong> The core workflow runs on your machine and writes twin artifacts to your workspace.</li>
+        <li><strong>Verified</strong> `wraith check` compares synthesized behavior against recorded exchanges and exits non-zero when conformance falls below threshold.</li>
+        <li><strong>Practical</strong> Wraith is meant for CI, local development, demos, and agent environments where real API behavior matters.</li>
+      </ul>
+    </div>
+  </section>
+</Layout>
