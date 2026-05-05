@@ -22,10 +22,10 @@
   <text x="76" y="550" font-family="Space Grotesk, system-ui, sans-serif" font-size="27" fill="#cfd6df">Check conformance before CI trusts the mock.</text>
   <g transform="translate(812 190)">
     <rect width="292" height="220" rx="3" fill="#0b0e13" stroke="#2a3240"/>
-    <text x="24" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#7df9ff">wraith check myapi</text>
+    <text x="24" y="48" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#7df9ff">wraith check --in-memory</text>
     <line x1="24" y1="76" x2="268" y2="76" stroke="#1f2632"/>
-    <text x="24" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#5eead4">PASS 4/4 sessions</text>
-    <text x="24" y="150" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#7d899b">247 exchanges</text>
-    <text x="24" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#7d899b">exit 0</text>
+    <text x="24" y="116" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#5eead4">23 recorded twins</text>
+    <text x="24" y="150" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#7d899b">1,754 routes &#183; 1,878 variants</text>
+    <text x="24" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" fill="#7d899b">9,040 recorded exchanges</text>
   </g>
 </svg>

@@ -96,6 +96,7 @@ kill %1
 ```
 
 Options:
+
 ```sh
 wraith record myapi --port 9090              # custom port
 wraith record myapi --tag smoke-test         # label the session
@@ -108,6 +109,7 @@ wraith synth myapi
 ```
 
 This analyzes all recordings and builds a model:
+
 - **Anti-unification**: finds the common template across response bodies, identifying which fields are constant, which vary, and how
 - **Hole classification**: determines how each variable field is sourced (echoed from request, generated ID, timestamp, counter, etc.)
 - **State inference**: detects CRUD operations and entity types
@@ -159,6 +161,7 @@ wraith serve myapi --port 8081
 Your twin is now an HTTP server. Point your test suite at `http://localhost:8081` instead of the real API. (Use a different port from the recording proxy so the two can coexist.)
 
 The twin:
+
 - Serves JSON responses matching the real API's structure
 - Maintains CRUD state (create an entity, read it back, update, delete)
 - Renders dynamic fields (timestamps, IDs, echoed values) correctly
@@ -172,10 +175,10 @@ curl -X POST http://localhost:8081/v1/customers -d '{"name": "Test"}'
 
 ## Fidelity modes
 
-| Mode     | Command | Description |
-|----------|---------|-------------|
+| Mode     | Command                                | Description                                      |
+| -------- | -------------------------------------- | ------------------------------------------------ |
 | `strict` | `wraith serve myapi --fidelity strict` | Replay recorded responses verbatim (exact match) |
-| `synth`  | `wraith serve myapi` (default) | Serve from synthesized model with state engine |
+| `synth`  | `wraith serve myapi` (default)         | Serve from synthesized model with state engine   |
 
 Use `strict` when you need exact byte-for-byte responses. Use `synth` (default) for stateful CRUD behavior with generated IDs and timestamps.
 
@@ -230,12 +233,11 @@ for i in range(10):
 ```
 
 Key principles:
+
 - **Vary the data**: random names, different field combinations, optional fields sometimes included
 - **Exercise error paths**: 404s, missing required fields, auth failures
 - **Multiple runs**: more observations = tighter model
 - **Cleanup**: delete test data after each run
-
-See `scripts/exercise-*.py` in the repository for examples across 15 real APIs (REST + GraphQL).
 
 ## Session tagging
 
@@ -308,13 +310,13 @@ Verifies configuration, scrub rules, HMAC key, and recording integrity.
 
 ## Exit codes
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | User or configuration error |
-| 2 | Conformance threshold not met |
-| 3 | Security policy violation |
-| 4 | Runtime error |
+| Code | Meaning                       |
+| ---- | ----------------------------- |
+| 0    | Success                       |
+| 1    | User or configuration error   |
+| 2    | Conformance threshold not met |
+| 3    | Security policy violation     |
+| 4    | Runtime error                 |
 
 ## Output formats
 

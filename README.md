@@ -49,7 +49,7 @@ record → synthesize → verify → repair → repeat
 - **explore**: (optional) seed from OpenAPI — generate scenario plans and measure spec-vs-recording coverage
 - **streaming**: SSE + gRPC server-streaming end-to-end — record long-lived streams live, synthesize per-event templates, serve realistic stream replay, conformance-check honestly. See [Streaming](https://wraith.cx/streaming/).
 
-Current: 18 twins at PASS (REST, GraphQL, gRPC unary + server-streaming, SSE). See [CHANGELOG.md](./CHANGELOG.md).
+Current proof corpus: 23 services/twins with recordings, 102 recorded sessions, 9,040 recorded exchanges, 1,754 synthesized routes, and 1,878 response variants across REST, GraphQL, gRPC unary + server-streaming, and SSE. See [CHANGELOG.md](./CHANGELOG.md).
 
 ## Quickstart
 
