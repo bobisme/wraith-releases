@@ -3,6 +3,76 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.6.0 - 2026-05-11
+
+**Brutal-review shakedown. 14 review passes, 70+ fixes, zero open bugs at cut. New wire-mode conformance, new `wraith install`, principled PII machinery.**
+
+### New commands
+
+- **`wraith install <pack.wraith>`** — inverse of `wraith pack`. Extracts a packaged twin into a usable workspace. Verifies per-artifact digests before writing any files. Defense-in-depth PII rescrub on extraction. `--name`, `--into`, `--force`, `--no-verify`, `--rescrub`.
+- **`wraith check --wire`** — wire-mode conformance. Spawns the real serve on a loopback port and replays recorded requests through it. Catches protocol-level bugs the in-memory check is blind to (header stripping, scrub layer mismatch, status code drift). Emits a separate `wire_fidelity_bp` score with the same partial-credit formula as the replay score.
+- **`wraith check --upstream`** without `--target` or `--in-memory` now defaults to in-memory replay (previously silently no-op'd). Emits info advice noting the implicit choice.
+- **`wraith reduce` strategies are distinct.** `coverage` uses greedy set cover; `diversity` uses farthest-point-first by Jaccard distance; `recency` ranks by timestamp. Invalid `--target-size` (e.g. `abc`, bare `50` without `%`) now exits non-zero with a hint instead of silently no-op'ing.
+
+### Conformance honesty
+
+- **Error-severity divergences count against the score.** `wraith check` no longer reports 100% conformance while emitting thousands of severity=error divergences. Any error-severity divergence on an exchange zeros the affected component score.
+- **`drift_type` classifier refined.** New `numeric_drift`, `host_rewrite`, `url_drift`, `value_drift`. `enum_expansion` reserved for real string-enum cases.
+- **`upstream_fidelity_bp`** — separate score answering "does the twin look like the live upstream right now?" Network failures degrade gracefully.
+
+### State engine fidelity
+
+- **404 on unknown IDs** for Read endpoints when both 2xx and 4xx variants are present. `GET /v1/customers/cus_FAKE` → 404 instead of 200 with empty body.
+- **POST /:id classified as Update**, not Create. Matches Stripe convention. Sub-resource POSTs (`/cancel`, `/capture`) still classify as Action.
+- **DELETE preserves pre-mutation membership** — first delete returns 200, second returns 404. Was: first delete returned 404 with `deleted:true` body (status/body mismatch).
+- **List endpoints honor pagination** — `?limit`, `?offset`, `?page+per_page`, `?starting_after`, `?ending_before`, `?cursor`. `has_more` is set when the template carries the field. Stripe, PostgREST, page-style, and Google-style conventions covered.
+- **List handler is O(limit), not O(N).** `?limit=10` against 10k entities: 70ms → 7ms. 1000 parallel `?limit=10`: 66s → 0.7s.
+- **`Idempotency-Key` honored on POST** (opt-in via `[serve.idempotency]`). Per-namespace `(route, key) → cached response`.
+- **REST and GraphQL malformed bodies return 400.** Empty body, primitives, shape-mismatched arrays all rejected with a structured `invalid_request_error` envelope. Default fallback when no recorded 4xx variant exists.
+- **URL normalization at request entry.** `/v1/customers/.` and `/v1/customers/..` are rejected with 400; `/v1/customers//` collapses to the list route. RFC 3986 dot-segment handling.
+- **Seen IDs serve recordings verbatim.** When the request path matches a recorded URL exactly, serve the recorded body bit-for-bit. The new hash-based variation only fires for unseen IDs.
+
+### Synthesis fidelity
+
+- **Path collapser preserves collection roots.** `/v1/balance`, `/v1/charges`, `/v1/payment_intents`, etc. stay as specific routes; only ID-shaped segments become `:param`. No more spurious `/v1/:param` catch-alls.
+- **Numeric path segments collapse to `:param` after N distinct values** (was N=∞). `/pokemon/{1,4,25}` → `/pokemon/:param`. Was: 3 separate routes; unseen IDs returned 501.
+- **Array length distribution preserved.** Synthesized responses render arrays at the median observed length, cycling through up to 8 representative elements, instead of folding to a single placeholder.
+- **Cardinality-detected per-twin enum_paths.** A new synth-time analyzer marks low-cardinality high-repetition kebab/snake-case fields as enum. The PII walker skips them. No more hardcoded list of "pokeapi.ability.name" / etc. entries in source — a new API (Discord, Salesforce, anything) gets the same treatment automatically.
+- **Per-request hash-seeded representative selection.** Same path → same response (deterministic). Different paths → different response content drawn from observed representatives.
+
+### Runtime fidelity
+
+- **Lua handler errors return 500.** Previously silently fell through to template rendering with a random `muxemwxu`-shaped id, making test failures invisible.
+- **Lua handlers resolve by filename convention** when no explicit hook is set in the model. Was: synthesis never populated `vm.lua_hook`, so handlers loaded but never ran; template rendering clobbered computed values (`total: 134.34` template constant).
+- **Form-encoded numeric scalars coerce to recorded type.** Stripe `amount=8888` now renders as `Value::Number(8888)` (was `"8888"`).
+- **Clock holes resolve per-request.** New `[serve.clock] mode = real | deterministic | fixed`. Default is real wallclock; deterministic uses a seeded monotonic counter.
+- **URL rewrite on outbound responses.** Absolute URLs at the recorded upstream host are rewritten to point at the twin. Third-party URLs (GitHub raw, CDNs) preserved verbatim (was being replaced with UUID placeholders).
+- **Vendor headers stripped on serve** by default (`Cf-Ray`, `X-Cache`, `Server`, etc.). Configurable via `[serve] strip_headers`.
+
+### Scrub and PII
+
+- **Default scrub rules cover email, phone, name, SSN, git author blobs.** Git commit metadata in GitHub recordings is tokenized at write time.
+- **Doctor scans recordings + model bodies for PII.** New `--allow-pii` flag downgrades findings to info. `wraith export openapi github` and `wraith pack` both re-scrub before emit so legacy twins don't ship raw PII.
+- **`[pii]` scrub.toml section.** `detect` toggle, `allowlist` for legitimate non-PII paths, `default_action`, `fields.always` for explicit overrides. Suffix-matching on `*_name` / `*_email` catches `customer_name`, `employee_name`, `author_email`.
+- **`pseudonymize` scrub action** — deterministic `user_<base62>` replacement keyed by HMAC. Stable across recordings/exports/packs for the same input.
+- **`wraith pack` archives are byte-stable** with `[serve.clock] mode = "deterministic"`. Two consecutive packs produce identical sha256 hashes.
+- **`wraith verify-pack` reports PII findings** alongside the digest check. `--strict` flips warnings to failures.
+- **Confidence-based outbound scrub on live serve.** Enum values (`bulbasaur`, `grass`, `razor-wind`) preserved; real person names (including short ones like `bob`) tokenized. Cardinality detection distinguishes thing-with-a-label-name entities (preserve `.name`) from person-with-a-personal-name entities (scrub).
+
+### gRPC
+
+- **`grpc-status` in HTTP/2 trailers** for non-empty bodies. Was in initial headers — a spec violation that grpcurl, tonic, gRPC-Go, gRPC-Java, and official Python gRPC all reject. Empty-body errors still use the spec-permitted Trailers-Only form.
+
+### Reliability
+
+- **UTF-8-safe `common_prefix`.** Synthesis no longer panics on multi-byte UTF-8 (Japanese, Cyrillic, accented Latin, emoji). API twins for internationalized APIs (anything with localized strings) build successfully.
+
+### Stats
+
+- Lib test count: 2403 → 2890 (+487).
+- 14 brutal-review passes; ended with zero open bugs.
+- 70+ feature/fix commits since v0.5.2.
+
 ## v0.5.2 - 2026-05-01
 
 **Streaming and capture fidelity. Three new fixture twins.**
