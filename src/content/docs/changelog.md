@@ -3,6 +3,37 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.7.0 - 2026-05-13
+
+**`wraith generate` hardening release. Four review passes on generate alone surfaced 11 fixable bugs — budgets that didn't enforce, audits that didn't write, scores that disagreed with `wraith check`, rejection reasons that hid the real cause. All fixed. The agentic and single-shot loops are now trustworthy enough to drive in CI.**
+
+### Hard budgets
+
+- **`--time-budget` cancels in-flight LLM calls.** Was advisory — a stalled call ran until external SIGKILL. Now each provider call is wrapped against the run-level deadline; on expiry the in-flight HTTP future is dropped and the process exits within `time_budget + 5s` grace. Covers ollama, openai, openrouter, and command providers, in agentic and single-shot modes.
+- **`--token-budget` enforced per-call.** The LLM's completion is capped at `min(8192, tokens_remaining)` so a single response can't push wildly over budget. Prompt tokens are also accounted now — `estimate_prompt_tokens()` (chars/4) subtracts from the budget before `max_tokens` is computed, and the call is skipped entirely when the prompt alone would exceed the budget. Stripe-sized prompts (~28k tokens) overshoot dropped from ~22% to ~0%.
+
+### Conformance and audit fidelity
+
+- **Generate's score matches `wraith check`.** Previously generate called the conformance engine with `lua_dir=None`, so on twins with Lua handlers (orderledger has 7) the engine returned 501s the diff engine saw as 233 phantom divergences. The Lua directory is now threaded through every call site; generate's reported score equals `wraith check --in-memory`.
+- **`generate-audit-*.json` written on every run.** Previously the audit directory was empty after every run (wrong write path). A new RAII writer atomically rewrites the file at start, after each round, on success, on error, and on panic-unwind. Schema: timestamps, twin/provider/model, budgets, initial + final conformance, per-route patches with reasons, per-round agentic transcripts, token spend, exhaustion reason.
+- **SIGKILL-safe audits.** A new `started` exhaustion-reason marker is written at construction so SIGKILL'd runs leave a meaningful marker on disk — readers can distinguish "still running" from "completed cleanly" instead of seeing `null`.
+
+### Envelope honesty
+
+- **Unified `exhaustion_reason` across envelope and audit.** Was two separate enums with different precedence — the same run could report `iterations` in the envelope and `budget_exhausted` in the audit. Now a single enum with documented precedence (`error > panic > killed > time_exhausted > budget_exhausted > iterations_exhausted > completed`); the two surfaces always agree.
+- **Token-vs-time precedence is honest.** A pre-call gate previously set a generic `budget_hit` flag that mapped to `time_exhausted` always — so a token-budget run reported `time_exhausted`. A typed `BudgetHitCause` carries the specific cause and routes each variant to the right `ExhaustionReason`.
+- **Real rejection reasons.** Rejected patches no longer all report `"no edits made"`. Each rejection site emits a specific `rejection_reason: budget-exhausted | parse-failure | regression-rejected | empty-edits | protocol-failure | llm-error | user-declined`.
+
+### Working `--interactive`
+
+- **`--interactive` now actually prompts.** Was declared and documented but never read. Now: before applying each accepted patch, a unified diff of `{status, headers, template}` is printed to stderr followed by `apply this patch? [y/N]:`. `y` / `yes` accepts; anything else (including EOF / empty line) rejects with `rejection_reason: user-declined`. Stdout JSON envelope stays clean. Works in both agentic and `--no-agentic` modes.
+
+### Stats
+
+- Lib tests: 2890 → 2953 (+63 across the release).
+- 11 generate-related bones closed across 4 review passes; zero open bugs at cut.
+
+
 ## v0.6.0 - 2026-05-11
 
 **Brutal-review shakedown. 14 review passes, 70+ fixes, zero open bugs at cut. New wire-mode conformance, new `wraith install`, principled PII machinery.**
