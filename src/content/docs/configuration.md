@@ -39,13 +39,15 @@ Runtime simulation (fault injection, latency, rate limiting, tracing) is configu
 
 ### `[serve]`
 
-| Field              | Type   | Default    | Description                                      |
-|--------------------|--------|------------|--------------------------------------------------|
-| `port`             | u16    | `8081`     | Port the twin server binds to                    |
-| `session_mode`     | string | `"header"` | Session isolation: `header`, `cookie`, or `path` |
-| `fidelity`         | string | `"synth"`  | Response mode: `strict` or `synth` (`permissive` is reserved, not yet implemented) |
-| `deterministic_seed` | u64  | `42`       | Seed for deterministic random generation         |
-| `debug`            | bool   | `false`    | Enable debug response headers                    |
+| Field                | Type   | Default    | Description                                      |
+|----------------------|--------|------------|--------------------------------------------------|
+| `port`               | u16    | `8081`     | Port the twin server binds to                    |
+| `session_mode`       | string | `"header"` | Session isolation: `header`, `cookie`, or `path` |
+| `fidelity`           | string | `"synth"`  | Response mode: `strict` or `synth` (`permissive` is reserved, not yet implemented) |
+| `deterministic_seed` | u64    | `42`       | Seed for deterministic random generation         |
+| `debug`              | bool   | `false`    | Enable debug response headers                    |
+| `strip_headers`      | bool   | `true`     | Strip non-allowlisted response headers (vendor `cf-*`, `x-cache`, `x-served-by`, `x-powered-by`, `nel`, `report-to`, etc.). Set to `false` to replay every recorded header verbatim. |
+| `rewrite_self_urls`  | bool   | `true`     | Rewrite absolute URLs whose host matches `service.base_url` (response bodies and `Location:`) to point back at the twin so clients don't leak off following next-page or related-resource URLs. |
 
 ### `[serve.latency]`
 
@@ -71,6 +73,38 @@ Runtime simulation (fault injection, latency, rate limiting, tracing) is configu
 |------------------|------|-------------------------------|
 | `limit`          | u64  | Max requests per window       |
 | `window_seconds` | u64  | Window duration in seconds    |
+
+### `[serve.clock]`
+
+Resolution policy for `created` / `created_at` / `updated_at` timestamp holes. `real` (the default) reads `SystemTime::now()` per request so sequential creates produce strictly-increasing timestamps — matches every real API. `deterministic` advances a seed-derived monotonic counter from `base_epoch` for byte-identical golden replay. `fixed` freezes the clock at `base_epoch`.
+
+| Field        | Type   | Default      | Description                                                   |
+|--------------|--------|--------------|---------------------------------------------------------------|
+| `mode`       | string | `"real"`     | `real`, `deterministic`, or `fixed`                           |
+| `base_epoch` | u64    | `1640995200` | Unix seconds. Starting value for `deterministic`; frozen value for `fixed`. Ignored when `mode = real`. |
+
+### `[serve.idempotency]`
+
+Replay cache for `Idempotency-Key`-style POST headers. Disabled by default so non-Stripe twins don't inadvertently get the behavior surprise — opt in per twin.
+
+| Field         | Type   | Default            | Description                                                  |
+|---------------|--------|--------------------|--------------------------------------------------------------|
+| `enabled`     | bool   | `false`            | Master toggle                                                |
+| `header`      | string | `"Idempotency-Key"` | Header carrying the idempotency key                          |
+| `ttl_seconds` | u64    | `86400`            | Cache entry TTL. Stale entries are lazily evicted on lookup. |
+
+```toml
+[serve.idempotency]
+enabled = true
+header = "Idempotency-Key"
+ttl_seconds = 86400
+```
+
+### `[serve.lua]`
+
+| Field      | Type   | Default  | Description                                                |
+|------------|--------|----------|------------------------------------------------------------|
+| `on_error` | string | `"fail"` | `"fail"` returns HTTP 500 + structured JSON envelope when a Lua handler raises. `"fallback"` falls through to the synth template engine (legacy pre-v0.6.0 behavior; hid handler bugs from conformance, opt-in only). |
 
 ### `[diff]`
 
@@ -166,11 +200,48 @@ Suppressed divergences are excluded from scoring but listed by `--show-suppresse
 
 ### `[generate.anti_unification]`
 
-| Field                      | Type   | Default    | Description                             |
-|----------------------------|--------|------------|-----------------------------------------|
-| `min_exchanges_per_route`  | u32    | `3`        | Min exchanges before pattern extraction |
-| `low_confidence_threshold` | f64    | `0.20`     | Below this, route is flagged low-conf   |
-| `array_mode`               | string | `"schema"` | `schema` or `element`                   |
+| Field                        | Type             | Default    | Description                             |
+|------------------------------|------------------|------------|-----------------------------------------|
+| `min_exchanges_per_route`    | u32              | `3`        | Min exchanges before pattern extraction |
+| `low_confidence_threshold`   | f64              | `0.20`     | Below this, route is flagged low-conf   |
+| `array_mode`                 | string           | `"schema"` | `schema` or `element`                   |
+| `array_length`               | string           | `"median"` | Length policy for variable-length arrays. `median` (default; back-compatible) collapses bimodal corpora — use `p75`, `p90`, or `max` for catalog / search APIs. |
+| `drop_empty_array_responses` | bool             | `false`    | When `true`, responses whose every array is empty are excluded from anti-unification per status group (only when at least one non-empty response exists for that group — never prunes to zero). |
+| `max_array_representatives`  | integer or `"all"` | `8`      | Distinct elements retained per variable-length array. Integer `N` keeps a deterministic sample of up to N elements in first-seen order. `"all"` retains every distinct element. |
+
+```toml
+# Recommended config for bimodal / search APIs
+[generate.anti_unification]
+array_length = "p90"
+drop_empty_array_responses = true
+max_array_representatives = "all"   # or a bound like 200
+```
+
+### `[generate.request_keying]`
+
+Recovers request → response correlation when a route's response depends on a request field (a parent id, a `useCase` scope, a search filter). Without this, synth collapses every value to one global representative.
+
+| Field  | Type   | Default | Description                                                |
+|--------|--------|---------|------------------------------------------------------------|
+| `mode` | string | `"off"` | `off` (inert; pre-v0.8.0 behavior), `manual`, or `auto`. `auto` additionally detects keys for unruled routes when one strongly predicts the response. |
+
+### `[[generate.request_keying.route]]`
+
+Explicit per-route rules. Honored under both `manual` and `auto`.
+
+| Field    | Type     | Required | Description                                            |
+|----------|----------|----------|--------------------------------------------------------|
+| `route`  | string   | yes      | `"METHOD /path/pattern"` matching the synthesized path |
+| `fields` | string[] | yes      | Request-body JSON paths (`$.a.b.c`). Multiple fields form a composite key. |
+
+```toml
+[generate.request_keying]
+mode = "manual"
+
+[[generate.request_keying.route]]
+route  = "POST /v1/assets/actions/search"
+fields = ["$.bulksearchv1AssetsInput.filter.parentId"]
+```
 
 ### `[generate.route_normalization]`
 
@@ -236,6 +307,45 @@ Suppressed divergences are excluded from scoring but listed by `--show-suppresse
 | `enabled` | bool     | `false` | Forward unmatched requests to upstream   |
 | `allow`   | string[] | `[]`    | Route patterns allowed for passthrough   |
 
+### `[base]` (overlay twins only)
+
+A twin becomes an overlay when `wraith.toml` carries a `[base]` section. Without it, the twin is a "root" twin and overlay code paths are inert. See [Overlays](/overlays/) for the full reference.
+
+| Field                  | Type   | Required | Description                                       |
+|------------------------|--------|----------|---------------------------------------------------|
+| `artifact`             | string | yes      | Artifact id of the provider twin                  |
+| `digest`               | string | yes      | Content digest of the provider's model (`sha256:<64 hex>`) — pins the overlay to a specific base version |
+| `model_schema_version` | u32    | yes      | Schema version of the provider twin's model       |
+| `scrub_policy_hash`    | string | yes      | Hash of the provider twin's scrub policy          |
+
+### `[overlay]` (overlay twins only)
+
+Optional metadata describing the overlay twin.
+
+| Field         | Type     | Required | Description                                                  |
+|---------------|----------|----------|--------------------------------------------------------------|
+| `owner`       | string   | yes      | Owner of the overlay (e.g. team name) — required by `wraith doctor` / `wraith lint` |
+| `description` | string   | no       | Overlay purpose and scope                                    |
+| `requires`    | string[] | no       | Declared dependencies on overlay artifacts (`name@sha256:<64 hex>`) |
+
+### `[capabilities]` (overlay twins only)
+
+Permitted modifications. Defaults prevent accidental data loss; only set when explicitly opting into more invasive changes.
+
+| Field                   | Type | Default | Description                                       |
+|-------------------------|------|---------|---------------------------------------------------|
+| `add_routes`            | bool | `true`  | Allow adding new routes                           |
+| `add_variants`          | bool | `true`  | Allow adding disjoint variants on existing routes |
+| `add_schema_extensions` | bool | `true`  | Allow extending the schema                        |
+| `add_fixture_sets`      | bool | `true`  | Allow adding new fixture sets                     |
+| `add_fault_profiles`    | bool | `true`  | Allow adding new fault profiles                   |
+| `add_lua_handlers`      | bool | `false` | Allow adding Lua handlers                         |
+| `override_variants`     | bool | `false` | Allow overriding existing variants                |
+| `override_fixtures`     | bool | `false` | Allow overriding existing fixtures                |
+| `override_lua_handlers` | bool | `false` | Allow overriding existing Lua handlers            |
+
+An `override_*` capability requires the matching `add_*` to also be enabled — `wraith lint` flags this as `capability-inconsistent`.
+
 ---
 
 ## scrub.toml
@@ -256,9 +366,39 @@ User-defined scrub rules are applied in order after built-in rules.
 |-------------|--------------|----------|-------------------------------------------|
 | `scope`     | ScrubScope   | yes      | `header`, `cookie`, `jsonpath`, `regex`, `query_param` |
 | `match`     | string       | yes      | Pattern to match (name, JSONPath, or regex) |
-| `action`    | ScrubAction  | yes      | `tokenize`, `mask`, or `redact`           |
+| `action`    | ScrubAction  | yes      | `tokenize`, `mask`, `redact`, or `pseudonymize` |
 | `replacement` | string     | no       | Required when action is `mask`            |
 | `apply_to`  | ApplyTarget[] | no      | `header_values`, `body`, `query`          |
+
+`pseudonymize` produces a deterministic `user_<base62>` HMAC envelope. Idempotent — re-running scrub on already-pseudonymized values is a no-op. Useful for username-shaped values in URL path segments or response bodies where you want a stable but obfuscated identifier.
+
+### `[pii]`
+
+Default PII detection runs on every recorded body and outbound response (`wraith doctor` audits recordings; `wraith serve` rescrubs outbound bodies). Covers email, phone, SSN, credit card (with Luhn check), name fields (via key-name + cardinality + value-shape heuristics), and git-author blobs (`Bob <bob@example.com>`).
+
+| Field            | Type         | Default      | Description                                                |
+|------------------|--------------|--------------|------------------------------------------------------------|
+| `detect`         | bool         | `true`       | Master toggle. When `false`, `wraith doctor` skips the PII audit pass entirely (other doctor checks still run). |
+| `allowlist`      | string[]     | `[]`         | JSONPath-style glob patterns that bypass PII detection. `*` matches one path segment; leading `$` is anchor-stripped; matching is suffix-based. |
+| `default_action` | string       | `"tokenize"` | Action emitted when writing scrubbed PII. `tokenize`, `redact`, or `reject`. **Note**: parsed and stored for round-trip; not yet enforced at scrub-write time. |
+| `fields.always`  | string[]     | `[]`         | JSON paths unconditionally treated as PII regardless of cardinality detection. Used when auto-detection misclassifies a real PII field as enum (e.g. a small fixture where every entity has `"Alice"`). |
+
+The detection chain is `fields.always` (forced) → `allowlist` (suppressed) → cardinality-detected `enum_paths` (skipped) → default name-key allowlist → heuristic classification. `allowlist` is the highest-precedence suppression layer.
+
+```toml
+[pii]
+detect = true
+allowlist = [
+  "$.country_code",
+  "$.timezone",
+]
+
+[pii.fields]
+always = [
+  "$.author.email",
+  "$.viewer.name",
+]
+```
 
 ### Built-in Rules
 
