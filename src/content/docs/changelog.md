@@ -5,162 +5,160 @@ description: Track Wraith releases, protocol support, conformance fixes, streami
 
 ## v0.9.0 - 2026-05-26
 
-**Feature release. Overlay support ships: a consumer team can layer workflow-specific behavior onto a provider-owned base twin without forking the base. v0 is additive-only — overlays add routes, disjoint variants, fixtures, and fault profiles. Base mutations and Lua-handler shadowing are deferred. The 23 existing root twins are byte-unaffected — overlay code paths are inert without a `[base]` config section.**
+**Overlays.** A consumer team can layer their own routes, variants, fixtures, and fault profiles onto a provider-owned base twin without forking the base, and ship that layer as its own `.wraith` artifact. Pre-existing root twins are completely unaffected — overlays are inert without a `[base]` section in `wraith.toml`.
 
-### Overlay support
+### Why you might want this
 
-An overlay is a normal Wraith twin with a digest-pinned base reference, packaged as a `.wraith` artifact, policy-checked, and composed into a materialized composite twin before serving. The whole feature is opt-in: a twin without `[base]` in `wraith.toml` runs the v0.8.4 code path verbatim.
+- You need a behavior the provider hasn't recorded (a webhook replay path, an error scenario, a specific edge case in CI).
+- Your test environment needs different fixture data than the base ships.
+- You want to add fault injection or latency profiles without touching the shared twin.
+
+If you'd otherwise vendor and edit a copy of someone else's twin, you want an overlay.
 
 ```bash
 wraith init checkout-billing --base billing-api@sha256:abc --owner checkout
 wraith record checkout-billing --tag happy-path
-wraith synth checkout-billing                              # delta mode default
+wraith synth checkout-billing                              # --delta is the default
 wraith compose --base billing-api.wraith \
                --overlay checkout-billing.wraith \
                --output composite
 wraith serve composite
-wraith rebase-check --overlay checkout-billing.wraith \
-                    --new-base billing-api@sha256:def      # check overlay against new base
 ```
 
-See [Overlays](/overlays/) for the full workflow and configuration reference.
+See [Overlays](/overlays/) for the full workflow, configuration reference, and v0 scope notes.
 
 ### New commands
 
-- **`wraith compose --base <base.wraith> --overlay <ovl.wraith> [--overlay …] --output <composite>`** — merge a base plus N overlays into a materialized composite twin workspace (or `.wraith` archive) in CLI argument order. Deterministic: same inputs produce byte-identical outputs.
-- **`wraith rebase-check --overlay <ovl.wraith> --new-base <base@sha256:…>`** — re-run overlay policy and compose validation against a newer base digest. Emits classifications (compatible / additive-safe / conflict) with confidence and evidence. Used by consumers to decide whether to promote an overlay against a base bump without re-recording.
-- **`wraith promote --overlay <ovl.wraith>`** — gated promotion of an overlay artifact; requires policy pass plus evidence sufficiency. Evidence-light overlays may be checked but not promoted.
+- **`wraith compose`** — merge a base plus one or more overlays into a materialized composite twin (a workspace or `.wraith` archive). Deterministic: same inputs in the same order produce byte-identical outputs.
+- **`wraith rebase-check`** — when the base advances, classify whether your overlay still applies cleanly against the new digest without having to re-record. Emits `compatible`, `additive-safe`, or `conflict` with evidence.
+- **`wraith promote`** — gated publication of an overlay artifact. Requires policy pass plus evidence sufficiency. Evidence-light overlays can still be checked, but they can't be promoted.
 
 ### New flags
 
-- **`wraith init --base <ref> --owner <team>`** — write a `[base]` and `[overlay] owner = "…"` section into the new twin's `wraith.toml`. Without `--base`, a root twin is created (pre-v0.9.0 behavior).
-- **`wraith synth --delta | --full | --base-path <path>`** — `--delta` (default for overlays) synthesizes only the routes that diverge from the base; `--full` synthesizes the entire twin; `--base-path` points at a base artifact for delta comparison. Root twins always use `--full` regardless of flag.
-- **`wraith serve --overlay <ovl.wraith> [--keep-composite] [--fixture <overlay-name>]`** — convenience macro that composes the overlay (or chain of overlays) into a temp workspace and serves it. `--keep-composite` retains the materialized workspace under `build/composite/<hash>` for debugging; `--fixture <name>` selects which overlay's fixture set seeds the default namespace.
-- **`wraith check --fixture <overlay-name>`** — run conformance against a composite while selecting an overlay's fixture set for default-namespace seeding (mirrors `serve --fixture`).
-- **`wraith pack --include-diagnostics`** — include compose-phase diagnostics (disjointness proofs, policy findings, rebase-check evidence) in the packed `.wraith` archive's `reports/` tree. Off by default to keep artifacts lean.
+- **`wraith init --base <ref> --owner <team>`** — initialize a twin as an overlay against a digest-pinned base.
+- **`wraith synth --delta | --full | --base-path <path>`** — `--delta` (the default for overlay twins) synthesizes only the routes that diverge from the base; `--full` synthesizes the entire twin. Root twins always synth full.
+- **`wraith serve --overlay <ovl.wraith> [--keep-composite] [--fixture <name>]`** — convenience for "compose then serve" without writing a composite to disk first. `--keep-composite` retains the materialized workspace for debugging.
+- **`wraith check --fixture <name>`** — pick which overlay's fixture set seeds the default namespace during conformance.
+- **`wraith pack --include-diagnostics`** — ship compose-phase diagnostics inside the packed archive's `reports/` tree.
 
 ### Safety posture
 
-Overlay policy enforcement uses the existing exit-code discipline:
+Overlay policy uses the existing exit-code discipline:
 
-- **Exit 0** — overlay composes cleanly.
-- **Exit 1** — user error (bad config, missing artifact).
-- **Exit 3** — policy-disallowed capability requested by overlay (weaker scrub posture, base-route deletion, base-variant mutation, Lua handler shadowing). JSON findings emitted with `{path, capability, reason, severity}`.
-- **Exit 4** — runtime error during composition.
+- **0** — composes cleanly.
+- **1** — user error (bad config, missing artifact).
+- **3** — policy violation (weaker scrub posture, base-route deletion, Lua handler shadowing, etc.).
+- **4** — runtime error during composition.
 
-### Hardening landed in the same release
+### Other improvements
 
-- **Path-traversal hardening.** `compose --base/--overlay` rejects archive entries whose paths would escape the staging root (`..`, absolute paths, symlink targets outside the input root).
-- **Self-contained composite fixtures.** `compose --output` copies the base + overlay `state/fixtures/` trees into the materialized composite. Packed composites are no longer fixture-light.
-- **Deterministic `synth_timestamp` in compose.** Two compose runs with identical inputs now produce byte-identical `twin.wir.json` files. Resolved via `SOURCE_DATE_EPOCH` when set, else a hash-derived stable timestamp from the composition digest.
-- **`wraith synth --delta` emits `build/delta-report.json`** with per-route `covered_by_base` / `delta` breakdown and structured `advice` (`overlay-is-redundant`, `many-unreplayable`, `base-route-missing`).
-- **Overlay invariant checks in `wraith lint`.** `base-digest-invalid`, `overlay-owner-missing`, `capability-inconsistent`, `passthrough-disallowed`, and `overlay-requires-invalid` now flagged by `wraith lint` (previously only by `wraith doctor`). Closes a split-brain between the two safety surfaces.
-
-### Stats
-
-- Lib tests: 2994 → 3472 (+478 across the release).
-- 70+ task bones closed across 8 phase gates plus 3 post-tag follow-ups.
-- Workspace clippy clean on Rust 1.95.
+- **`compose` output is fully self-contained.** Composite workspaces now carry the merged `state/fixtures/` and recordings rather than referring back to the input artifacts.
+- **`compose` rejects archive entries with traversal-shaped paths** (`..`, absolute paths, symlinks pointing outside the input root). Defense-in-depth on the unpack stage.
+- **Same inputs to `compose` produce byte-identical artifacts.** Set `SOURCE_DATE_EPOCH` to pin timestamps further. Useful for CI that diffs `.wraith` archives.
+- **`wraith synth --delta` writes `build/delta-report.json`** with a per-route breakdown of `covered_by_base` / `delta` / `unreplayable` and structured advice (`overlay-is-redundant`, `many-unreplayable`, `base-route-missing`) — gives a clear signal about whether an overlay is doing anything new or whether you should re-record.
+- **`wraith lint` catches overlay misconfigurations.** Missing `[overlay].owner`, invalid base digest, mismatched capability flags, and overlay twins that try to enable passthrough are flagged with the same surface `wraith doctor` already used.
 
 ## v0.8.4 - 2026-05-21
 
-**Patch. Action / query `POST`s no longer mint phantom Create entities.**
+**Patch. Search and query `POST` routes no longer mint phantom entities in state.**
 
-`infer_state_op` mapped any `POST` without a `:param` to `StateOp::Create`, including action / query POSTs like `POST /v1/assets/actions/search`. Each call minted a phantom id and persisted a junk entity into the same state store now holding (per v0.8.3) seeded fixtures. Three concrete failure modes resulted: fixture-name collisions, quota exhaustion against `serve.limits.max_entities_per_type`, and state-snapshot pollution.
+POSTs like `POST /v1/assets/actions/search` were being classified as resource Create operations, so every search call left a junk entity behind in the per-session state store. After v0.8.3 wired seeded fixtures through serve, this caused three visible problems: search-shaped fixture-name collisions, faster-than-expected exhaustion of `serve.limits.max_entities_per_type`, and state snapshots polluted with synthetic search responses.
 
-The fix combines two signals:
+Action POSTs are now detected by two signals — the last URL segment (`search`, `query`, `count`, `aggregate`, `summarize`, `lookup`, and the Stripe-style `/actions/<verb>` shape) and the response body shape (single-array bodies or paginated `{results: [], next_cursor: …}` shapes). Routes matching either signal dispatch without state mutation.
 
-- **Path signal.** Closed action-verb vocabulary as the final non-param segment (`search`, `searches`, `query`, `queries`, `count`, `aggregate`, `summarize`, `lookup`), plus the Stripe-style `/actions/<verb>` trailing-segment shape regardless of the verb's lexical form.
-- **Response-shape signal.** A Create-classified route whose response body is `{single_array_field}` or `{result_set_key: […], pagination_metadata_key: …}` with known result-set and pagination keys is declassified to `None`.
-
-Declassified routes serve via the existing no-state-op dispatch branch with zero state mutation. Conservative non-flips (`find`, `events`, `batch`, `bulk`, plural action-nouns) wait for the response-shape signal before declassifying, so real Create endpoints whose last segment happens to lexically match a query-verb-shaped noun stay classified correctly.
-
-Operators of twins whose response shape now triggers the heuristic (e.g. Stripe `POST /v1/customers/search`) should re-run `wraith synth` to pick up the fix.
+If you have a twin where this heuristic now applies (e.g. `POST /v1/customers/search`), re-run `wraith synth` to pick up the fix.
 
 ## v0.8.3 - 2026-05-21
 
-**Patch. `state/fixtures/` is no longer dead at serve time.**
+**Patch. `state/fixtures/` is now actually loaded at serve time.**
 
-`StateStore::load_fixtures` had existed since v0.1 but had zero production callers — `wraith init` created `state/schema.json` and `state/fixtures/` but `wraith serve` never read them, so the documented fixtures format was inert. Any state-backed Read / List started a session with an empty store regardless of what was on disk.
+The `state/fixtures/<entity>.json` shape has been documented since v0.1, but `wraith serve` never read those files — every state-backed Read or List started with an empty store regardless of what was on disk. This is now wired through end-to-end.
 
-Wired through end-to-end:
+- **Per-session seeding.** `state/fixtures/<entity_type>.json` is loaded once per `X-Wraith-Session` namespace on first use. A delete then persists for the rest of the session; no re-seeding mid-session.
+- **Default namespace too.** Requests without an `X-Wraith-Session` header still get seeded.
+- **`state/schema.json`** declarations merge into the route-derived schema. Route-derived wins on conflict, so an empty `entity_types: {}` (the `wraith init` default) is fully inert.
+- **Fail-safe.** Missing or malformed files warn-log and proceed rather than crash `serve`. A twin with no `state/` directory behaves exactly as it did pre-v0.8.3.
 
-- A new `SynthHandler::with_lua_and_fixtures(model, lua_dir, twin_root)` constructor takes the twin root. The existing `with_lua` is now a thin wrapper passing `None` so in-tree callers keep compiling.
-- `serve.rs` passes `Some(twin_root)` so fixtures participate by default.
-- `<twin_root>/state/schema.json` (author-declared `entity_types`) merges into the route-derived schema. Route-derived wins on conflict. An empty `entity_types: {}` (the `wraith init` default) is fully inert.
-- `<twin_root>/state/fixtures/<entity_type>.json` is loaded once per `X-Wraith-Session` namespace, lazily on the first request that creates that namespace. The default namespace is also seeded on its first request. Re-seeding does not happen on subsequent requests within the same session, so a delete persists.
-- Inert by default: a twin with no `state/schema.json`, no `state/fixtures/`, or an empty schema gets pre-v0.8.3 behavior. Missing or malformed files warn-log and proceed rather than crash `serve`.
+**Use case.** Multi-twin demos and shared-entity test scenarios — e.g. customer `cus_123` referenced consistently across a CRM twin, a billing twin, and an orders twin — can now be set up by authoring one fixture per twin rather than driving a `POST` sequence at the start of every session.
 
-**Use case.** Multi-twin demos and coordinated test scenarios where several twins share an entity (e.g. customer `cus_123` referenced consistently across a CRM twin, a billing twin, and an orders twin) can now be set up by authoring one fixture per twin under `state/fixtures/` rather than driving a `POST` sequence on every fresh session.
-
-**Known interaction with outbound scrub.** Wraith's scrub pipeline runs on every outbound response, including responses built from seeded fixtures. A fixture entity with a `name` field (or any field the default PII detector classifies) will have that field tokenized on the wire. This is documented behavior from the v0.6.0 PII work, not a regression — but it's a usability cliff for fixture authors. Workarounds: declare the field in `scrub.toml`'s allowlist, or set `[pii] detect = false` for twins where seeded data is not real PII.
+**Heads up — outbound scrub still runs on seeded fixtures.** A fixture entity with a `name` field will be tokenized on the wire by the default PII rules (`"alpha"` → `"name_<base62>"`). This is the v0.6.0 PII behavior, not a regression — but it surprises fixture authors. Workarounds: add the field to your `[pii] allowlist` in `scrub.toml`, or set `[pii] detect = false` for twins where seeded values aren't real PII.
 
 ## v0.8.2 - 2026-05-19
 
-**Patch. Closes a latent `$arr_N` placeholder leak on List and Read routes.**
+**Patch. Closes the remaining `$arr_N` placeholder leak on List and Read routes.**
 
-v0.7.1 floored the Create path against variable-length-array markers (`["$arr_N"]`), but `handle_list_sync` and `handle_read_sync` build the response from a raw or merged `body_template` and only ever rewrote the **top-level** collection array. A marker nested anywhere else — `{"data":{"items":["$arr_0"]}}` or a sibling `meta` / `facets` array — reached the wire verbatim on List / Read requests.
+v0.7.1 fixed Create dispatch, but nested array placeholders — e.g. `{"data":{"items":["$arr_0"]}}` or a sibling `meta` / `facets` array — still leaked through List and Read because those handlers only rewrote the top-level collection array. They're now expanded everywhere variants surface a body, so no literal `$arr_N` markers reach the wire.
 
-A shared `expand_variant_arrays` floor (mirrors the v0.7.1 Create-path floor: same deterministic per-request hash, idempotent, no-op when the variant declares no `array_reps`) now runs at every List / Read body-surfacing site. No behavior change for routes without nested array placeholders; the 23 existing twins are unaffected.
+If your synthesized responses include nested arrays and you saw `["$arr_0"]` in serve output before, upgrade and they're gone. No re-synth required.
 
 ## v0.8.1 - 2026-05-18
 
-**Patch. Completes the v0.8.0 CORS preflight fix for the default `strip_headers = true` config.**
+**Patch. Completes the v0.8.0 CORS preflight fix under the default config.**
 
-v0.8.0 correctly carried `access-control-allow-{methods,headers}` and `vary` into the synthesized `OPTIONS` variant, but with `strip_headers = true` (the `wraith init` default) the serve-time header stripper's allowlist only permitted `allow-origin` / `allow-credentials` / `expose-headers`. A real browser preflight therefore still lost `allow-methods` / `allow-headers` / `vary` and every cross-origin request stayed blocked — i.e. the v0.8.0 fix was inert for the most common configuration.
+v0.8.0 correctly synthesized `access-control-allow-{methods,headers}` and `vary` on the `OPTIONS` variant, but the default `strip_headers = true` config (created by `wraith init`) then stripped those exact headers on the way out because they weren't in the response-header allowlist. The v0.8.0 fix was therefore inert for most twins.
 
-`access-control-allow-methods`, `access-control-allow-headers`, `access-control-max-age`, and `vary` are now in the default allowlist. Conformance scoring is unaffected (it uses a separate `CONFORMANCE_HEADERS` list). Verified end-to-end against real recordings with `strip_headers = true`: the synthesized preflight matches the recorded upstream byte-for-byte on all four CORS headers.
+`access-control-allow-methods`, `access-control-allow-headers`, `access-control-max-age`, and `vary` are now in the default allowlist. Cross-origin clients hitting a synth twin behave correctly under `strip_headers = true`. Conformance scoring is unaffected.
 
 ## v0.8.0 - 2026-05-18
 
-**Feature release. Closes three consumer findings: dropped CORS preflight headers, array element variety, and request → response correlation. Every new behavior is opt-in or a strict bugfix — the 23 existing twins are byte-unaffected unless the operator opts in.**
+**Feature release. Closes three rough edges that came up in real-corpus use: dropped CORS preflight headers, repetitive array elements, and routes whose response depends on a request field. Every new behavior is opt-in or a strict bugfix; pre-existing twins keep their current bytes unless you opt in.**
 
-### CORS preflight headers no longer dropped
+### CORS preflights actually work in browsers
 
-`wraith serve --fidelity synth` returned a bare `204` for cross-origin `OPTIONS` preflights, dropping `access-control-allow-{origin,methods,headers}` and `vary` — every cross-origin replay was browser-blocked. Two causes: (1) a no-body status group (OPTIONS / 204 / 304) collected its static headers only from a body-bearing exchange, yielding an empty header map; (2) the empty-body serve short-circuit emitted only the static map and ignored `header_programs` (where the classified CORS headers lived). Body-less variants now carry the recorded headers plus classified programs, and the empty-body path renders programs the same way the non-empty path does (still an empty body for 204 / 304). Strict-mode behavior was already correct; synth now matches it.
+`wraith serve --fidelity synth` returned a bare `204` for cross-origin `OPTIONS` preflights, dropping `access-control-allow-{origin,methods,headers}` and `vary`. Every browser request was therefore blocked at the preflight stage. The synthesized `OPTIONS` variant now carries the recorded CORS headers, body-less status groups (204 / 304) included. Strict-mode replay was already correct; synth now matches.
 
 ### Configurable array-element variety
 
-`array_length = "p90"` (v0.7.2) recovered a ~500-long array but anti-unification retained only `MAX_REPRESENTATIVES = 8` distinct elements, tiled to length — list UIs showed 8 rows repeated ~62×.
+`array_length = "p90"` (v0.7.2) recovered a ~500-long array but anti-unification still capped the *distinct elements* at 8 and tiled them to length — list UIs showed 8 rows repeated ~62×.
 
-- **`[generate.anti_unification] max_array_representatives`** — an integer N (a deterministic, size-bounded sample of up to N distinct elements in first-seen order) or `"all"` (every distinct element). Default `8` → byte-identical to pre-v0.8.0 output.
+```toml
+[generate.anti_unification]
+max_array_representatives = "all"   # or a bound like 200
+```
+
+Default stays at `8` so existing twins are byte-unchanged. Catalog or search APIs whose recordings carry many distinct rows are the main beneficiaries.
 
 ### Request-keyed response bucketing
 
-A route whose response depends on a *request* field (a parent id, a `useCase` scope, a search filter) collapsed every value to one global representative — expanding any tree node returned the same payload.
+Some routes return different bodies depending on a *request* field — a parent id, a `useCase` scope, a search filter. Without help, synth collapses every input to one global representative, and every variation in the request returns the same canned response. The new request-keying machinery synthesizes one response per request-field bucket and routes the right one back.
 
-- **`[generate.request_keying] mode`** — `"off"` (default, inert) | `"manual"` | `"auto"`.
-- **`[[generate.request_keying.route]]`** `{ route, fields }` — explicit per-route request-body JSON-path key(s); multiple fields form a composite key.
-- **`auto`** additionally auto-detects a key for unruled routes, accepting a request field only when bucketing by it yields response-coherent, mutually-distinct buckets.
+```toml
+[generate.request_keying]
+mode = "manual"          # or "auto" for conservative auto-detection
 
-Synthesis emits one request-guarded variant set per bucket; the whole-route synthesis is appended once as the specificity-0 fallback for an unknown key. The runtime needs no change — `select_variant` already scores `FieldEquals` over the request body and prefers the more specific guard.
+[[generate.request_keying.route]]
+route  = "POST /v1/assets/actions/search"
+fields = ["$.input.filter.parentId"]
+```
+
+Default is `mode = "off"`, fully inert. Use `manual` to declare keys per-route, or `auto` to let synth try to detect a key for unruled routes when one strongly predicts the response.
 
 ### Recommended config
+
+For catalog / search-shaped APIs that combine bimodal arrays with request-keyed responses:
 
 ```toml
 [generate.anti_unification]
 array_length = "p90"
 drop_empty_array_responses = true
-max_array_representatives = "all"   # or a bound, e.g. 200
+max_array_representatives = "all"
 
 [generate.request_keying]
 mode = "manual"
-
-[[generate.request_keying.route]]
-route  = "POST /v1/assets/actions/search"
-fields = ["$.bulksearchv1AssetsInput.filter.parentId"]
 ```
 
 ## v0.7.2 - 2026-05-15
 
-**Feature release. Adds configurable array-length policy and an opt-in empty-response filter so synth handles bimodal and search corpora. Both knobs default to pre-v0.7.2 behavior exactly — existing twins are unaffected unless the operator opts in.**
+**Feature release. Adds two knobs so synth handles bimodal / search corpora correctly. Both default to pre-v0.7.2 behavior exactly — existing twins are byte-unchanged unless you opt in.**
 
-A debounced keystroke-search endpoint records a flood of empty no-match responses interleaved with a few fat catalog loads. Anti-unification rendered such routes with anemic ~1-element arrays even though the recordings carried real catalog data.
+A debounced search endpoint records a flood of empty no-match responses interleaved with a few real catalog loads. Synth's default `median`-length array policy then collapsed such routes to ~1-element arrays even though the data was right there in the recordings.
 
-- **`[generate.anti_unification] array_length`** — `"median"` (default) | `"p75"` | `"p90"` | `"max"`. Selects which statistic of the observed-length distribution becomes the rendered array length. Nearest-rank percentile method.
-- **`[generate.anti_unification] drop_empty_array_responses`** — `false` (default). When `true`, responses whose every array is empty are excluded from anti-unification *per status group, and only when at least one non-empty response exists for that group* (never prunes to zero). Error envelopes and scalar responses are never dropped.
-- **Empty-majority gate is now policy-aware.** Anti-unification collapses an array to a constant `[]` when ≥2/3 of observations are empty. That gate is now skipped under any non-`median` policy (the operator explicitly asked for the fat shape).
-- **Actionable fidelity warning.** The `array fidelity warning` emitted during `wraith synth` now reports the active policy and, on the collapse-prone defaults, prints the exact `wraith.toml` stanza to apply.
+Two new knobs, both under `[generate.anti_unification]`:
+
+- **`array_length`** — `"median"` (default), `"p75"`, `"p90"`, or `"max"`. Pick the length statistic that matches your corpus shape.
+- **`drop_empty_array_responses`** — `false` (default). When `true`, all-empty responses are excluded from anti-unification *per status group*, but only when at least one non-empty response exists for that group, so error variants and scalar responses are never dropped.
+
+`wraith synth` now prints the active policy in its fidelity warning and, on collapse-prone defaults, suggests the exact stanza to add.
 
 ### Recommended config for bimodal / search APIs
 
@@ -172,16 +170,13 @@ drop_empty_array_responses = true
 
 ## v0.7.1 - 2026-05-14
 
-**Patch release. Fixes a `$arr_N` placeholder leak in the synth-mode Create dispatch — `wraith serve --fidelity synth` was returning literal `["$arr_0"]` markers in responses (and persisting them into state) for routes classified as Create whose anti-unified body templates carried variable-length array placeholders.**
+**Patch. Fixes a placeholder leak in synth-mode Create responses.**
 
-`handle_create_sync` built the response entity from the raw `body_template` (carrying the literal markers), then overlaid that entity onto the renderer's expanded body via `merge_with_template` — the entity's literal marker clobbered the expanded array. The unexpanded entity was then persisted back, so subsequent Read / List on the same id kept re-emitting `["$arr_N"]` instead of recorded data.
+`wraith serve --fidelity synth` was returning literal `["$arr_0"]` strings in `POST` responses for routes classified as Create whose variants used variable-length array placeholders. The same string was also being persisted into state, so subsequent Read / List requests for that entity kept emitting it indefinitely.
 
-Fixed at two layers:
+Fixed at write time — expanded entities go into state, and expanded bodies go to clients. Re-pack any twin whose recordings include Create routes with variable-length arrays to flush the bad state from earlier serve runs.
 
-- **Entity construction.** `build_entity_from_template` now expands `$arr_N` markers against `variant.array_reps` before scrubbing and persisting, so state never holds the literal placeholder.
-- **Belt-and-suspenders.** `handle_create_sync` re-runs `expand_array_placeholders` on the merged body after `merge_with_template` (both holes and no-holes branches) — idempotent floor mirroring the existing `scrub_hole_placeholders` pass. Any future entity-construction regression that re-introduces a marker can't reach the wire.
-
-The follow-up nested-placeholder leak on List / Read routes is fixed in v0.8.2.
+The related nested-placeholder leak on List / Read routes is fixed in v0.8.2.
 
 ## v0.7.0 - 2026-05-13
 
