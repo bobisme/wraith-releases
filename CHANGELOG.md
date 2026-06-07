@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.9.1 — 2026-06-05
+
+**Overlay flow hardening.** Patch release shaking out the v0.9.0 overlay workflow against real-corpus twins. No wire-format changes — v0.9.0 packs and composites re-verify and re-serve unmodified.
+
+### Things that just work now
+
+- **`wraith serve --overlay <ovl.wraith> --overlay-policy <path>`** — local workspace overlays compose against a relaxed policy without forcing you to sign every iteration. Pass a policy file that allows unsigned overlays and adds your overlay's scrub-policy hash to `allowed_scrub_policy_hashes`.
+- **`wraith compose` outputs survive `wraith doctor`.** The composite now carries `scrub.toml` and a populated `schema_version` so doctor stops rejecting freshly-composed workspaces as "missing security policy."
+- **`wraith init --base provider@sha256:<hex>`** — the embedded `artifact = "name@sha256:..."` form that `--help` and the Overlays guide already documented now actually parses out of `[base]` in `wraith.toml`. The legacy split `digest = "..."` field still works.
+- **`wraith doctor <path-to-workspace>`** accepts literal workspace paths the same way `wraith serve` does, instead of demanding a twin name resolvable under `twins/`.
+- **`wraith serve --fixture <overlay-name>`** accepts the bare overlay suffix as a fallback when the namespaced form is omitted, matching what the help text already promised.
+
+### Reporting that doesn't contradict itself
+
+- **`wraith synth --delta` JSON summary** now carries `new_routes`, `synthesized_overlay_exchanges`, and a per-reason `unreplayable_by_reason` map alongside the existing fields. Pre-fix, the headline `delta` stayed at `0` when an overlay introduced brand-new routes the base never observed — CI scripts read that as "no overlay material" even when synth emitted seven new routes. The new `synthesized_overlay_exchanges` count matches the emitted route count regardless of whether the routes are existing-route deltas or brand-new surfaces.
+- **`wraith compose` advice no longer says `lint-clean` while also reporting `20 lint warning(s)`.** Round-trip success is still reported (because the round-trip itself succeeded), but the message now reflects the warning count and points at the warning-bearing advice entry.
+- **`wraith compose --check`** now distinguishes "perfect conformance" from "no replay evidence." A composite with no recorded sessions surfaces `verify-check-no-evidence` instead of an unconditional 10000-bp score.
+- **`compose-report.json` variant counts** at the top level now agree with per-overlay counts for overlay-added routes.
+
+### Strict pack verification is usable on public APIs again
+
+- **`wraith verify-pack --strict`** stops flagging every `name` JSON-key literal in an anti-unified model template as PII. On synth-emitted model artifacts (`model/symbols.json`, the WIR), single-token enum values that look like slugs (`bulbasaur`, `machine`, `egg`, `platinum`) are now treated the way the runtime scrubber's cardinality filter would — suppressed structurally. Multi-token person names ("Alice Smith") still fire. Email-keyed leaves are unconditionally counted regardless of artifact because `@` is a strong self-contained shape signal. Concrete effect: on a packed PokéAPI twin, strict verify drops from ~14k findings (false positives) to 0.
+- **`wraith pack --format json`** and the JSON envelope carry `content_digest` so overlay authors can read the base package digest required by `init --base <ref>@sha256:...` directly from the envelope instead of cracking the archive open.
+- **Pack and verify-pack surface the overlay's scrub policy hash**, so consumers can satisfy strict compose's `allowed_scrub_policy_hashes` gate without unpacking.
+- **`verify-pack` JSON envelope** surfaces composition provenance (base + overlay digests) on composite archives so you can read what a composite was made of without unpacking it.
+- **`verify-pack` no longer false-positives on Wraith-authored structural provenance keys** (`artifact_name`, `twin_name`) in freshly-packed archives.
+
+### Runtime
+
+- **Synth-handler variant guards return a `route-no-match` error when every guard misses**, instead of silently dispatching to the first variant. Eliminates a class of confusing zero-divergence false-positive routes you might have hit when authoring guarded overlays.
+- **`serve --overlay` no longer leaves composite workspaces behind** outside the tempdir when overlay paths resolve through unexpected basename shapes. `--keep-composite` still works for debugging.
+
+### Action you might want to take
+
+- If you scripted around `delta_filter.delta` to decide whether an overlay produced material, switch to `delta_filter.synthesized_overlay_exchanges` (or `synthesis.routes.length`). The legacy `delta` field is preserved for backward compatibility but only counts variants on existing base routes — it doesn't include brand-new routes the overlay contributed.
+- If `wraith verify-pack --strict` was failing in CI on public-API twins because of `name` PII findings, you can drop any `[diff.suppress]` workarounds — strict should now pass cleanly on those.
+
 ## v0.9.0 — 2026-05-26
 
 **Overlays.** A consumer team can layer their own routes, variants, fixtures, and fault profiles onto a provider-owned base twin without forking the base, and ship that layer as its own `.wraith` artifact. Pre-existing root twins are completely unaffected — overlays are inert without a `[base]` section in `wraith.toml`.
