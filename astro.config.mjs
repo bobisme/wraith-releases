@@ -74,6 +74,7 @@ export default defineConfig({
           items: [
             { label: 'Twin Lifecycle', slug: 'twin-lifecycle' },
             { label: 'Overlays', slug: 'overlays' },
+            { label: 'Intent contracts', slug: 'contracts' },
             { label: 'Streaming', slug: 'streaming' },
             { label: 'GraphQL', slug: 'graphql' },
             { label: 'Simulation', slug: 'simulation' },

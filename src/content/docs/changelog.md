@@ -3,6 +3,27 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.10.0 - 2026-06-16
+
+**Intent contracts.** A consumer can now hand a provider an executable statement of what they depend on — packaged as a signed `.wic` archive that pins the twin by digest and carries runnable scenarios — and the provider verifies it against a freshly composed twin in CI. Purely additive: every v0.9.x pack, composite, and `wraith.toml` re-verifies and re-serves unchanged, and root and overlay twins are untouched. The whole surface is the new `wraith contract` command group. See the [Intent contracts](/contracts/) guide for the full workflow.
+
+### What you can do now
+
+- **Author a contract.** `wraith contract pack ./staged --output checkout-refund.wic --key ./signing.key` assembles a deterministic, signed `.wic`: it pins the base (and any overlay) twin by digest, bundles your sigil Lua scenarios plus the canonical `lib/wraith.lua` helper, and PII-scans the bundle before sealing it (override knowingly with `--override-pii <reason>`). Pack twice → byte-identical.
+- **Inspect before you trust.** `wraith contract inspect <pkg>.wic` summarizes a package; `--strict` runs the trust-gate lint and rejects anything whose PII scan isn't clean.
+- **Verify against your own twin.** `wraith contract verify <pkg>.wic --base-pack base.wraith --overlay-pack overlay.wraith` resolves the pinned artifacts to your local packs, composes and serves the twin, runs the scenarios through `sigil`, and reports a CI-ready envelope. Structured exit codes: `0` pass, `2` contract failed, `3` digest/signature, `4` runtime. `--pack-dir <dir>` auto-resolves pins by digest; an unmet pin names the digest it needs.
+- **Accept through a trust gate.** `wraith contract accept <pkg>.wic --trust-store ./trusted-signers` checks the signature against keys you trust, materializes the runnable scenarios, and records the decision in a `<name>.status.toml` sidecar you commit with your code. Non-default evidence modes, extra capabilities, and non-self-contained packages each need an explicit `--allow-…` flag. Re-accepting a contract that already has a decision is refused unless you pass `--force`, so a re-accept can never silently undo a `reject` or `suspend`.
+- **Decide how a contract gates CI.** `set-status advisory|accepted|blocking` is the dial — `advisory` runs but never fails CI, `accepted` warns, `blocking` makes a violation a hard failure. `reject` and `suspend` record the two "not installed" decisions. `status` and `list` read back where everything stands (both default to the installed view).
+- **Check a contract against a base bump.** `wraith contract rebase-check` classifies a contract against a new base digest (`compatible` / `additive-safe` / `conflict`) so you can tell whether a base change breaks a downstream expectation without re-recording.
+
+### How the pieces fit
+
+A contract carries three independent dials so the consumer's intent, each scenario's maturity, and the provider's gating decision never collide: **consumer_status** (`observed` / `proposed` / `deprecated`, in the signed `.wic`), each scenario's **lifecycle_state** (`draft` → `canary` → `active` → `quarantined` → `retired`), and the provider's **provider_status** dial (`advisory` / `accepted` / `blocking`, plus the not-installed `rejected` / `quarantined`, in the unsigned sidecar). The sidecar keeps an honest audit trail: `accepted_by` is the original accepter (set once), while `decided_by` names whoever made the latest decision — so a rejected contract shows both who first accepted it and who rejected it.
+
+### Privacy by default
+
+The default evidence mode is `reference_only` — a contract carries scenarios and digests, not your captured traffic. Scrubbed-excerpt and full-recording modes exist but must be admitted explicitly at accept time, and the choice is recorded in the sidecar.
+
 ## v0.9.1 - 2026-06-05
 
 **Overlay flow hardening.** Patch release shaking out the v0.9.0 overlay workflow against real-corpus twins. No wire-format changes — v0.9.0 packs and composites re-verify and re-serve unmodified.
