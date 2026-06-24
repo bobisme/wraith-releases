@@ -28,7 +28,7 @@ curl -fsSL https://wraith.cx/install.sh | WRAITH_INSTALL_DIR="$HOME/bin" sh
 Pin a specific version:
 
 ```sh
-curl -fsSL https://wraith.cx/install.sh | WRAITH_VERSION=0.9.1 sh
+curl -fsSL https://wraith.cx/install.sh | WRAITH_VERSION=0.11.1 sh
 ```
 
 Quiet mode for CI or scripts:
@@ -129,12 +129,12 @@ wraith --version
 
 ## Prebuilt target matrix
 
-| Target | Status |
-|---|---|
-| Linux x86_64 | Prebuilt |
-| macOS Apple silicon | Prebuilt |
-| Linux ARM64 | Build from source until release runners are validated |
-| macOS Intel | Build from source until release runners are validated |
+| Target              | Status                                                |
+| ------------------- | ----------------------------------------------------- |
+| Linux x86_64        | Prebuilt                                              |
+| macOS Apple silicon | Prebuilt                                              |
+| Linux ARM64         | Build from source until release runners are validated |
+| macOS Intel         | Build from source until release runners are validated |
 
 ## Next steps
 

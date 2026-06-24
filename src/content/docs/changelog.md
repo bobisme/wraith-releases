@@ -3,6 +3,20 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.11.1 - 2026-06-18
+
+**Patch release. `wraith up` now stops cleanly on Ctrl+C everywhere.** On macOS and BSD, pressing Ctrl+C on `wraith up` left the twins running and the foreground hung — the shutdown path keyed off a Linux-only liveness check, so it never signalled the child twins. Shutdown is now portable: a single SIGINT stops every twin and `up` exits in about a tenth of a second with no orphaned processes. Linux behavior is unchanged (and a rare hang on a recycled PID is gone too). No config or wire-format changes.
+
+## v0.11.0 - 2026-06-18
+
+**Live request logs in `wraith up`.** Running `wraith up` used to print a status table and then sit silent while it streamed every twin's output to a log file — you had no idea what was hitting your twins until you went digging. Now the foreground shows a live, color-coded request log, `docker compose up`-style, with one line per request. Purely additive — no wire formats change, and the log is default-on but easy to silence.
+
+### What you can do now
+
+- **See every request as it happens.** `wraith serve` emits one access line per request — method, path, status, duration, and the matched route template — across synth, strict, and fuzzy modes. On a terminal you get a compact human line like `200 GET  /v1/customers/cus_123  4ms  (route: /v1/customers/:id)`; piped into CI you get one JSON object per line. Control it with `--access-log compact|json|off` (default-on, independent of `--trace`; auto-picks compact for a TTY and JSON for a pipe).
+- **Watch all your twins at once.** `wraith up` interleaves each twin's requests into one stream with an aligned, color-coded `<twin> | …` prefix, while still teeing the raw lines to `.wraith/logs/<twin>.log` for `wraith down` and post-mortems. A terminal gets compact lines, CI gets JSON — decided once, for every twin.
+- **Read a clean foreground.** `wraith serve`'s own startup and shutdown logs now render in the same compact, color-coded format on a terminal instead of a wall of JSON, so the request lines stand out. Piped output stays all-JSON for both tracing and access lines.
+
 ## v0.10.0 - 2026-06-16
 
 **Intent contracts.** A consumer can now hand a provider an executable statement of what they depend on — packaged as a signed `.wic` archive that pins the twin by digest and carries runnable scenarios — and the provider verifies it against a freshly composed twin in CI. Purely additive: every v0.9.x pack, composite, and `wraith.toml` re-verifies and re-serves unchanged, and root and overlay twins are untouched. The whole surface is the new `wraith contract` command group. See the [Intent contracts](/contracts/) guide for the full workflow.
