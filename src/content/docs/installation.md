@@ -28,7 +28,7 @@ curl -fsSL https://wraith.cx/install.sh | WRAITH_INSTALL_DIR="$HOME/bin" sh
 Pin a specific version:
 
 ```sh
-curl -fsSL https://wraith.cx/install.sh | WRAITH_VERSION=0.11.1 sh
+curl -fsSL https://wraith.cx/install.sh | WRAITH_VERSION=0.12.0 sh
 ```
 
 Quiet mode for CI or scripts:

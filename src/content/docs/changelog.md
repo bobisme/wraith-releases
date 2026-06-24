@@ -3,6 +3,21 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.12.0 - 2026-06-24
+
+**`wraith generate` is now free and deterministic by default — no LLM, no API keys, no tokens — and twins reproduce far more of an API's real responses out of the box.** Running `wraith generate <twin>` now repairs your twin using only the recordings it already has; the optional LLM pass is opt-in behind `--llm`. Across Wraith's 23-API test corpus, every twin now passes conformance from `wraith synth` + `wraith generate` alone, with no LLM in the loop. No config or wire-format changes — existing twins re-synth and re-serve unchanged.
+
+### What changed for you
+
+- **`wraith generate` no longer needs an LLM provider.** By default it runs only the deterministic repair pass — instant, free, and reproducible, with nothing to set up. If you relied on the model-fixing LLM pass, add `--llm` (and configure a provider) to turn it back on; when divergences remain after the free pass, the output tells you to re-run with `--llm`. Old flags still work: `--agentic` now implies `--llm`, and `--cegis-only` is simply the new default.
+- **Twins reproduce derived URLs and IDs correctly.** Fields built from other values — a resource URL that splices in a name from your request, or one that embeds the response's own generated ID (e.g. a Notion page URL like `…/Title-Slug-<id>`) — are now reproduced as live derived values instead of a frozen recorded string. These used to show up as drift on every replay; now they track the request and the generated ID, including for URLs inside list elements.
+- **Fewer false conformance failures.** `wraith check` now recognizes values a twin legitimately can't reproduce byte-for-byte and compares them by shape: server-side hash tokens inside URLs (avatar hashes, signed-URL tokens, content hashes) and timestamps (any two valid RFC-3339 datetimes). It also preserves server-added fields when you read back an object you created with a sparser request, and compares list/query result arrays without tripping on length.
+- **Smaller models for path-heavy APIs.** Synthesis now folds slug and name path segments (like `/repos/:owner/:repo/…`) into route parameters instead of creating one route per value, so models for large APIs are dramatically smaller.
+
+### Should I do anything?
+
+Re-run `wraith generate <twin>` to pick up the new deterministic repairs — it's free now. If your workflow set `--agentic` or expected the LLM pass by default, switch to `--llm` to keep it. Nothing else changes: recordings, models, and `wraith.toml` are all compatible.
+
 ## v0.11.1 - 2026-06-18
 
 **Patch release. `wraith up` now stops cleanly on Ctrl+C everywhere.** On macOS and BSD, pressing Ctrl+C on `wraith up` left the twins running and the foreground hung — the shutdown path keyed off a Linux-only liveness check, so it never signalled the child twins. Shutdown is now portable: a single SIGINT stops every twin and `up` exits in about a tenth of a second with no orphaned processes. Linux behavior is unchanged (and a rare hang on a recycled PID is gone too). No config or wire-format changes.
