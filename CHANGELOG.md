@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.13.0 — 2026-06-24
+
+**Wraith now models APIs that return mixed collections of different object types — like Stripe's event stream — instead of flattening them into one lossy shape.** When an array or nested field holds different resource types selected by a discriminator (e.g. each Stripe event's `data.object` is a `customer`, a `price`, a `product`, …), Wraith learns a separate schema for each case. Type-specific fields that used to vanish because they were rare across the whole collection are preserved, and conformance compares each element against its own type. On the Stripe events endpoint this removes about 555 false "missing field" failures. The feature turns on automatically only where it applies — homogeneous lists and existing twins are unchanged.
+
+### What changed for you
+
+- **Heterogeneous collections are modeled per type.** Wraith detects when a collection's elements (or a nested object) vary by a discriminator field (`object`, `type`, `kind`, `__typename`, …) and synthesizes a schema for each observed type. A field that only appears on one type — say `unit_amount` on a `price` — is no longer dropped just because it's rare across the whole list.
+- **More accurate conformance on mixed lists.** `wraith check` matches each element to its type before comparing, so a reordered or differently-sampled collection no longer produces spurious missing/extra-field noise. Clearer divergences now call out an unknown or missing type tag instead of a wall of field mismatches.
+- **Control over types you haven't recorded.** Real APIs keep adding new event and resource types. By default Wraith flags an unrecorded type as a divergence (fail-closed), and `wraith check` tells you which type it saw. You can relax this per route in `wraith.toml`:
+  ```toml
+  [[diff.tagged_union_policy]]
+  route = "GET /v1/events"
+  policy = "fallback_common_schema"   # or "replay_representative"
+  ```
+
+### Should I do anything?
+
+Re-run `wraith synth <twin>` (and `wraith generate <twin>`) to pick up per-type modeling for any heterogeneous collections in your API. Nothing else changes — recordings, models, and `wraith.toml` are all compatible, and homogeneous APIs are unaffected.
+
 ## v0.12.0 — 2026-06-24
 
 **`wraith generate` is now free and deterministic by default — no LLM, no API keys, no tokens — and twins reproduce far more of an API's real responses out of the box.** Running `wraith generate <twin>` now repairs your twin using only the recordings it already has; the optional LLM pass is opt-in behind `--llm`. Across Wraith's 23-API test corpus, every twin now passes conformance from `wraith synth` + `wraith generate` alone, with no LLM in the loop. No config or wire-format changes — existing twins re-synth and re-serve unchanged.
