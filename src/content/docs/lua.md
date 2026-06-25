@@ -48,6 +48,30 @@ For sub-resource routes (`GET /orders/:id/invoice`) the convention switches to H
 
 First match wins. Routes that don't match any handler fall through to the synth template — silently, no warning. This is intentional: most routes don't need a handler.
 
+### How `<entity>` and `<seg>` are derived
+
+`<entity>` comes from the route's inferred entity type — the collection segment of the path (the segment before the id parameter, e.g. `customers` in `/v1/customers/:id`, or the last segment for a list route like `/v1/charges`). Version prefixes (`v1`, `v2`, …) are skipped.
+
+The entity name is **singularized** for Create / Read / Update / Delete and offered in both singular and plural for List, so you don't have to guess the count:
+
+- `POST /v1/customers` → `create_customer` (singular)
+- `GET /v1/customers` → `list_customers` (plural), also `list_customer`, `customers`, `customer`
+
+The name is also **normalized to `snake_case`** before matching, so handler files stay legal identifiers no matter how the API spells its paths. A hyphenated, dotted, or camelCase collection all bind to the same snake_case file:
+
+| Route                               | Inferred entity     | Handler file (Read-by-id)        |
+|-------------------------------------|---------------------|----------------------------------|
+| `GET /v3/license-agreements/:id`    | `license-agreement` | `get_license_agreement.lua`      |
+| `GET /v1/lineItems/:id`             | `lineItem`          | `get_line_item.lua`              |
+| `GET /api/PaymentMethods/:id`       | `PaymentMethod`     | `get_payment_method.lua`         |
+| `POST /orders/:id/line-items`       | sub-resource `line-items` | `create_line_item.lua`     |
+
+Always name handler files in `snake_case` — `get_license_agreement.lua`, not `get_license-agreement.lua`. The raw on-the-wire spelling is also accepted as a fallback, but `snake_case` is the convention and the form shown by tooling.
+
+### `lua_hook` and re-synth
+
+The `lua_hook` field on a variant is an explicit, advanced override — it pins one variant to a named handler regardless of filename. **`wraith synth` never writes `lua_hook`, and re-synth rebuilds variants from recordings, so any hand-edited `lua_hook` is dropped on the next synth.** Don't rely on it for normal binding. The filename convention above is the supported, re-synth-safe mechanism: drop a correctly named file in `lua/handlers/` and it keeps binding across every re-synth, because the binding is derived from the route, not stored in the model.
+
 ## The API surface
 
 Every handler sees four global tables.

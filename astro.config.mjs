@@ -82,6 +82,7 @@ export default defineConfig({
             { label: 'Conformance & drift', slug: 'conformance' },
             { label: 'Generate (LLM repair)', slug: 'generate' },
             { label: 'Lua handlers', slug: 'lua' },
+            { label: 'Fixtures & state', slug: 'fixtures' },
             { label: 'Packaging & shipping', slug: 'packaging' },
           ],
         },

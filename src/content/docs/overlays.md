@@ -77,7 +77,7 @@ Anything else is flagged as a conflict in strict mode (`exit 2`). The disjointne
 
 ## Fixture selection
 
-Overlay-contributed fixtures load into per-namespace state under the same `state/fixtures/<entity_type>.json` shape used by base twins (v0.8.3). The default namespace is **never** auto-seeded with overlay fixtures — operators opt in by sending an `X-Wraith-Fixture: <overlay-name>` header or by passing `wraith serve --fixture <overlay-name>` so demos remain reproducible. Without selection, overlay-contributed entities are silently absent from `state.query()`.
+Overlay-contributed fixtures load into per-namespace state using the same fixture-set layout as base twins (a directory under `state/fixtures/`, or the legacy `state/fixtures/<entity_type>.json` flat files). See [Fixtures & state](/fixtures/) for the on-disk shapes. The implicit `default` set is what new sessions seed from; operators opt into a different overlay-contributed set by passing `wraith serve --fixture <set-name>` so demos remain reproducible. Without selection, entities in non-default sets are silently absent from `state.query()`.
 
 ## Rebase-check
 
