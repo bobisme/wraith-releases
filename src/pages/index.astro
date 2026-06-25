@@ -550,8 +550,12 @@ import Layout from '../layouts/Landing.astro';
           Record traffic from Stripe-style, GitHub-style, GraphQL, gRPC, or SSE services, then run the verified API mock locally in CI, demos, or agent loops.
         </li>
         <li>
-          <strong>Do not use Wraith for a hand-authored mock UI.</strong>
-          If you only need a static example response, a simpler API mocking tool or Postman collection may be the better fit.
+          <strong>Author the behavior the recording can't show.</strong>
+          Layer Lua handlers for computed responses and state machines, plus fixtures for seed data, on top of a recorded twin. Hand-authoring behavior and state is first-class, not a workaround.
+        </li>
+        <li>
+          <strong>Reach for something simpler for a one-off static stub.</strong>
+          If all you need is a single canned response with no state, a basic mocking tool or Postman collection is a lighter fit than a twin.
         </li>
         <li>
           <strong>Do not treat it as hosted production traffic replay.</strong>
