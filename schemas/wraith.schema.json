@@ -1,0 +1,1668 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WraithConfig",
+  "description": "Top-level `wraith.toml` configuration for a single twin.\n\nEvery twin directory contains a `wraith.toml` that controls proxy\nbehaviour, serving parameters, conformance thresholds, model generation\nsettings, and recording retention policy.\n\nA twin is an overlay iff [base] is present. Root twins omit [base].",
+  "type": "object",
+  "properties": {
+    "base": {
+      "description": "Base twin identity (present for overlay twins, absent for root twins).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BaseConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "capabilities": {
+      "description": "Overlay capability toggles (defaults allow safe additions, prevent overrides).",
+      "$ref": "#/$defs/OverlayCapabilities",
+      "default": {
+        "add_fault_profiles": true,
+        "add_fixture_sets": true,
+        "add_lua_handlers": false,
+        "add_routes": true,
+        "add_schema_extensions": true,
+        "add_variants": true,
+        "override_fixtures": false,
+        "override_lua_handlers": false,
+        "override_variants": false
+      }
+    },
+    "diff": {
+      "description": "Conformance scoring thresholds.",
+      "$ref": "#/$defs/DiffConfig",
+      "default": {
+        "fields": {},
+        "ignore_headers": [],
+        "overrides": {},
+        "required_score": 0.9,
+        "scoring_version": 1,
+        "session_pass_rate": 0.95,
+        "split_variants": false,
+        "suppress": [],
+        "tagged_union_policy": [],
+        "thresholds": {
+          "body_structure": 0.9,
+          "body_values": 0.85,
+          "header_conformance": 0.8,
+          "status_exact_match": true,
+          "symbol_consistency": 1.0
+        }
+      }
+    },
+    "generate": {
+      "description": "Agent-driven model generation settings.",
+      "$ref": "#/$defs/GenerateConfig",
+      "default": {
+        "anti_unification": {
+          "array_length": "median",
+          "array_mode": "schema",
+          "drop_empty_array_responses": false,
+          "low_confidence_threshold": 0.2,
+          "max_array_representatives": 8,
+          "min_exchanges_per_route": 3
+        },
+        "dependent_cases": {
+          "allow": [],
+          "enabled": false,
+          "max_cases": 64,
+          "min_gain_bits": 1.0,
+          "min_observations": 4
+        },
+        "guard_inference": {
+          "algorithm": "decision_tree",
+          "max_depth": 4,
+          "z3_minimization": false
+        },
+        "llm": {
+          "base_url": "http://localhost:11434",
+          "max_tokens": 4096,
+          "model": "qwen3.5:9b",
+          "provider": "ollama",
+          "temperature": 0.2,
+          "timeout_seconds": 120
+        },
+        "max_iterations": 10,
+        "regression_tolerance": 0.0,
+        "request_keying": {
+          "mode": "off",
+          "route": []
+        },
+        "route_normalization": {
+          "numeric_ids": true,
+          "prefix_pattern_ids": true,
+          "structural_alignment": false,
+          "value_flow_confirmation": true
+        },
+        "routing": {
+          "air_gapped": false,
+          "default_runner": null,
+          "fallback": []
+        },
+        "runners": {},
+        "symbolization": {
+          "entropy_threshold": 4.5,
+          "exclude_natural_language": true,
+          "exclude_urls": true,
+          "field_name_hinting": true,
+          "min_string_length": 4
+        },
+        "time_budget_minutes": 30,
+        "token_budget": 200000,
+        "type_inference": {
+          "cross_route_unification": true,
+          "enum_max_values": 5,
+          "enum_min_samples": 3
+        }
+      }
+    },
+    "overlay": {
+      "description": "Overlay metadata (optional, applies only when [base] is present).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/OverlayConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "passthrough": {
+      "description": "Passthrough mode (forward unmatched requests to upstream).",
+      "$ref": "#/$defs/PassthroughConfig",
+      "default": {
+        "allow": [],
+        "enabled": false
+      }
+    },
+    "proxy": {
+      "description": "Recording proxy settings.",
+      "$ref": "#/$defs/ProxyConfig",
+      "default": {
+        "mode": "reverse",
+        "port": 8080
+      }
+    },
+    "recordings": {
+      "description": "Recording retention and size limits.",
+      "$ref": "#/$defs/RecordingsConfig",
+      "default": {
+        "max_body_size_mb": 10,
+        "max_sessions": 1000,
+        "max_total_size_mb": 5000,
+        "pack_mode": "none",
+        "required_for_promotion": true,
+        "retention_days": 90
+      }
+    },
+    "refresh": {
+      "description": "Drift-detection refresh settings.",
+      "$ref": "#/$defs/RefreshConfig",
+      "default": {
+        "budget_requests": 500,
+        "sample_strategy": "risk_weighted"
+      }
+    },
+    "schema_version": {
+      "description": "Schema version for forward-compatibility migration.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint32",
+      "minimum": 0
+    },
+    "serve": {
+      "description": "Twin HTTP server settings.",
+      "$ref": "#/$defs/ServeConfig",
+      "default": {
+        "clock": {
+          "base_epoch": 1640995200,
+          "mode": "real"
+        },
+        "debug": false,
+        "deterministic_seed": 42,
+        "fidelity": "synth",
+        "idempotency": {
+          "enabled": false,
+          "header": "Idempotency-Key",
+          "ttl_seconds": 86400
+        },
+        "latency": {
+          "max_ms": 5000,
+          "min_ms": 0,
+          "mode": "none",
+          "multiplier": 1.0
+        },
+        "limits": {
+          "max_entities_per_type": 10000,
+          "max_namespaces": 1000,
+          "max_total_state_mb": 100,
+          "request_drain_timeout_ms": 5000
+        },
+        "lua": {
+          "on_error": "fail"
+        },
+        "port": 8081,
+        "rate_limits": {},
+        "rewrite_self_urls": true,
+        "session_mode": "header",
+        "strip_headers": true
+      }
+    },
+    "service": {
+      "description": "Upstream service identity and connection details.",
+      "$ref": "#/$defs/ServiceConfig"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "service"
+  ],
+  "$defs": {
+    "AntiUnificationConfig": {
+      "description": "Anti-unification settings for pattern extraction (`[generate.anti_unification]`).",
+      "type": "object",
+      "properties": {
+        "array_length": {
+          "description": "Length policy when rendering variable-length arrays. Default\n`median` preserves pre-v0.7.2 behaviour; set `p90`/`max` for\nbimodal/search APIs whose median array length collapses to ~0.",
+          "$ref": "#/$defs/ArrayLength",
+          "default": "median"
+        },
+        "array_mode": {
+          "$ref": "#/$defs/ArrayMode",
+          "default": "schema"
+        },
+        "drop_empty_array_responses": {
+          "description": "When true, responses whose every array is empty are excluded from\nanti-unification for a route *as long as at least one non-empty\nresponse exists for that route* (never prunes to zero). Makes the\nmedian itself meaningful on bimodal corpora and benefits every\narray in the response at once. Default `false` (back-compatible).",
+          "type": "boolean",
+          "default": false
+        },
+        "low_confidence_threshold": {
+          "type": "number",
+          "format": "double",
+          "default": 0.2
+        },
+        "max_array_representatives": {
+          "description": "Max distinct array-element representatives retained per variable-length\narray. Integer N (deterministic sample of up to N distinct elements)\nor `\"all\"`. Default `8` — byte-identical to pre-fix behaviour, so the\nexisting twins are unaffected unless this key is set. (bn-2gbe)",
+          "$ref": "#/$defs/MaxArrayReps",
+          "default": 8
+        },
+        "min_exchanges_per_route": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 3,
+          "minimum": 0
+        }
+      }
+    },
+    "ArrayLength": {
+      "description": "Array-length policy for rendering variable-length arrays from\nanti-unified templates.\n\nThe renderer must pick a single length for a variable-length array.\n`Median` (the historical behaviour) is correct for unimodal data but\ncollapses to ~0 on bimodal corpora — e.g. a debounced keystroke-search\nendpoint whose recordings are dominated by empty no-match responses\nwith a few fat catalog loads. A high percentile or `Max` picks a\nrepresentative non-empty length so the twin serves usable data.",
+      "oneOf": [
+        {
+          "description": "Median observed length (default; back-compatible).",
+          "type": "string",
+          "const": "median"
+        },
+        {
+          "description": "75th-percentile observed length.",
+          "type": "string",
+          "const": "p75"
+        },
+        {
+          "description": "90th-percentile observed length.",
+          "type": "string",
+          "const": "p90"
+        },
+        {
+          "description": "Maximum observed length.",
+          "type": "string",
+          "const": "max"
+        }
+      ]
+    },
+    "ArrayMode": {
+      "description": "Output mode for anti-unification.",
+      "oneOf": [
+        {
+          "description": "Keep a schema-level anti-unification representation.",
+          "type": "string",
+          "const": "schema"
+        },
+        {
+          "description": "Keep element-level anti-unification representation.",
+          "type": "string",
+          "const": "element"
+        }
+      ]
+    },
+    "BaseConfig": {
+      "description": "Base twin identity for overlay twins (`[base]`).\n\nAn overlay twin references a provider twin via `[base]` containing:\n- `artifact`: artifact ID of the provider twin\n- `digest`: content digest of the provider twin's model\n- `model_schema_version`: version of the model schema used by the provider\n- `scrub_policy_hash`: hash of the provider's scrub policy\n\n`artifact` accepts two equivalent forms (bn-2j4i):\n\n```toml\n# Embedded form — matches `wraith init --base <id>@sha256:<hex>`,\n# AGENTS.md, the overlay plan, and the pack/init `--help`\n# examples.\n[base]\nartifact = \"billing-api@sha256:abc...\"\n\n# Separate form — matches what `wraith init` writes to disk and\n# the JSON schema documents.\n[base]\nartifact = \"billing-api\"\ndigest   = \"sha256:abc...\"\n```\n\nWhen both forms appear, the explicit `digest` field wins (so a\nhand-edited override behaves the way an operator expects).\n`model_schema_version` defaults to the current\n[`SCHEMA_VERSION`] and `scrub_policy_hash` defaults to\n`\"UNVERIFIED\"` (matching `wraith init`'s `--scrub-policy-hash`-\nabsent fallback), so the documented minimal `[base]` examples\n(`artifact = \"id@sha256:hex\"` only) load without a TOML parse\nerror.",
+      "type": "object",
+      "properties": {
+        "artifact": {
+          "description": "Artifact ID of the provider twin. The bare ID (no `@sha256:`\nsuffix) is canonicalised here at deserialize time even when\nthe source TOML used the embedded form.",
+          "type": "string"
+        },
+        "digest": {
+          "description": "Content digest (hash) of the provider twin's model.",
+          "type": "string"
+        },
+        "model_schema_version": {
+          "description": "Schema version of the provider twin's model.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "scrub_policy_hash": {
+          "description": "Hash of the provider twin's scrub policy.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact",
+        "digest",
+        "model_schema_version",
+        "scrub_policy_hash"
+      ]
+    },
+    "ClockConfig": {
+      "description": "Clock configuration (`[serve.clock]`).\n\n```toml\n[serve.clock]\nmode = \"real\"            # real | deterministic | fixed\nbase_epoch = 1640995200  # Unix seconds; only used by deterministic / fixed\n```",
+      "type": "object",
+      "properties": {
+        "base_epoch": {
+          "description": "Base epoch in Unix seconds. Used as the starting value for\n`deterministic` mode and the frozen value for `fixed` mode.\nIgnored when `mode = real`. Default = `1640995200`\n(`2022-01-01T00:00:00Z`).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 1640995200,
+          "minimum": 0
+        },
+        "mode": {
+          "description": "Selected mode. Default = `real`.",
+          "$ref": "#/$defs/ClockModeConfig",
+          "default": "real"
+        }
+      }
+    },
+    "ClockModeConfig": {
+      "description": "Clock mode for resolving timestamp holes in synthesised responses.\n\n`real` (default) reads `SystemTime::now()` per request, so sequential\n`Create` ops produce strictly-increasing `created` timestamps —\nmatches the behaviour of every real API. `deterministic` uses a\nseed-derived monotonic counter starting from `base_epoch`, so the\nsame seed produces byte-identical timestamps across runs (golden\nreplay). `fixed` freezes the clock at `base_epoch` — preserves the\npre-bn-2y5b legacy behaviour for callers that depend on a stable\ntimestamp value.",
+      "oneOf": [
+        {
+          "description": "Wallclock at request time. **Default.**",
+          "type": "string",
+          "const": "real"
+        },
+        {
+          "description": "Seed-derived monotonic counter, advances per read.",
+          "type": "string",
+          "const": "deterministic"
+        },
+        {
+          "description": "Frozen at `base_epoch`. Legacy behaviour.",
+          "type": "string",
+          "const": "fixed"
+        }
+      ]
+    },
+    "DependentCaseAllowRule": {
+      "description": "One allowlisted dependent-case target pair.\n\nExample:\n\n```toml\n[[generate.dependent_cases.allow]]\nroute = \"GET /v1/events\"\ndiscriminator = \"$.data[*].type\"\ntarget = \"$.data[*].data\"\n```",
+      "type": "object",
+      "properties": {
+        "discriminator": {
+          "description": "Sibling string discriminator path in `$`-rooted response JSON form.",
+          "type": "string"
+        },
+        "fallback_policy": {
+          "description": "Unknown discriminator fallback policy. Default `reject_unknown`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "route": {
+          "description": "Route pattern to match, e.g. `\"GET /v1/events\"`. Absent = any route.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "target": {
+          "description": "Target object path selected by the discriminator.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "discriminator",
+        "target"
+      ]
+    },
+    "DependentCaseInferenceConfig": {
+      "description": "Experimental dependent-case synthesis (`[generate.dependent_cases]`).\n\nDisabled by default. When enabled, synth only emits dependent-case metadata\nfor explicit allowlist entries. This keeps broad MDL candidates from\nchanging production artifacts unless an operator names the route + target\npair to try.",
+      "type": "object",
+      "properties": {
+        "allow": {
+          "description": "Explicit allowed route + discriminator + target pairs.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/DependentCaseAllowRule"
+          }
+        },
+        "enabled": {
+          "description": "Master gate for dependent-case inference. Default `false`.",
+          "type": "boolean",
+          "default": false
+        },
+        "max_cases": {
+          "description": "Maximum distinct discriminator values accepted for one target pair.",
+          "type": "integer",
+          "format": "uint",
+          "default": 64,
+          "minimum": 0
+        },
+        "min_gain_bits": {
+          "description": "Minimum model-compression gain in bits required to emit metadata.",
+          "type": "number",
+          "format": "double",
+          "default": 1.0
+        },
+        "min_observations": {
+          "description": "Minimum valid target observations before an allowlisted pair can emit.",
+          "type": "integer",
+          "format": "uint",
+          "default": 4,
+          "minimum": 0
+        }
+      }
+    },
+    "DiffConfig": {
+      "description": "Conformance scoring configuration (`[diff]`).",
+      "type": "object",
+      "properties": {
+        "fields": {
+          "description": "User-supplied field classifications keyed by JSON path (e.g. `$.id`).\n\nThese are merged with auto-detected classifications from the synth\nmodel, with user-supplied values taking precedence.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/FieldClassConfig"
+          },
+          "default": {}
+        },
+        "ignore_headers": {
+          "description": "Extra response headers to ignore during conformance checks.\n\nThese are merged with the built-in ignore list (date, server,\nx-request-id, etc.). Case-insensitive.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ThresholdOverride"
+          },
+          "default": {}
+        },
+        "required_score": {
+          "type": "number",
+          "format": "double",
+          "default": 0.9
+        },
+        "scoring_version": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 1,
+          "minimum": 0
+        },
+        "session_pass_rate": {
+          "type": "number",
+          "format": "double",
+          "default": 0.95
+        },
+        "split_variants": {
+          "description": "Enable discriminator-based variant splitting during synthesis.\n\nWhen `true`, `wraith synth` splits heterogeneous endpoints by\ndiscriminator field (type/object/kind) into per-type variants with\ninferred path-segment guards.  Enable per-twin when the API serves\ndifferent resource types through the same route pattern.",
+          "type": "boolean",
+          "default": false
+        },
+        "suppress": {
+          "description": "Suppressed divergences — known mismatches to exclude from reports\nand scoring.\n\n```toml\n[[diff.suppress]]\nroute = \"POST /repos/*/statuses/*\"\npath = \"body.created_at\"\nreason = \"twin uses placeholder timestamps\"\n\n[[diff.suppress]]\ncategory = \"header_mismatch\"\nreason = \"vendor headers not reproduced by twin\"\n\n[[diff.suppress]]\nroute = \"POST /v1/chat/completions\"\npath = \"status\"\ncategory = \"status_mismatch\"\nexpected = \"2xx\"\nactual = \"4xx\"\nreason = \"OpenAI-compatible invalid-model errors vary by vendor\"\n```",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/DivergenceSuppression"
+          }
+        },
+        "tagged_union_policy": {
+          "description": "Per-route / per-scope fallback policy for unknown tagged-union tags.\n\nEach rule overrides the synthesized (default `reject_unknown`)\n[`FallbackPolicy`](crate::cli::synth::FallbackPolicy) for tagged-union\nscopes that match its `route`/`scope` globs. The default stays\nfail-closed; rules opt specific scopes into looser handling for APIs\n(such as Stripe) that continually add discriminator values.\n\n```toml\n[[diff.tagged_union_policy]]\nroute = \"GET /v1/events\"\nscope = \"body.data[*].data.object\"\npolicy = \"fallback_common_schema\"\nreason = \"Stripe adds event types continuously\"\n```",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/TaggedUnionPolicyRule"
+          }
+        },
+        "thresholds": {
+          "$ref": "#/$defs/ThresholdConfig",
+          "default": {
+            "body_structure": 0.9,
+            "body_values": 0.85,
+            "header_conformance": 0.8,
+            "status_exact_match": true,
+            "symbol_consistency": 1.0
+          }
+        }
+      }
+    },
+    "DivergenceSuppression": {
+      "description": "A suppression rule for known divergences.\n\nAll non-`None` fields must match for a divergence to be suppressed.\nFields left unset (or absent in TOML) act as wildcards.\n\n```toml\n[[diff.suppress]]\nroute = \"POST /repos/*/statuses/*\"\npath = \"body.created_at\"\nreason = \"twin uses placeholder timestamps\"\n\n[[diff.suppress]]\nroute = \"POST /v1/chat/completions\"\npath = \"status\"\ncategory = \"status_mismatch\"\nexpected = \"2xx\"\nactual = \"4xx\"\nreason = \"OpenAI-compatible invalid-model errors vary by vendor\"\n```",
+      "type": "object",
+      "properties": {
+        "actual": {
+          "description": "Actual value pattern to match. Supports `*` globs and HTTP status\nclass patterns such as `\"2xx\"` and `\"4xx\"`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "category": {
+          "description": "Divergence category: `status_mismatch`, `value_mismatch`,\n`type_mismatch`, `missing_field`, `extra_field`, `header_mismatch`,\n`array_length_mismatch`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "expected": {
+          "description": "Expected value pattern to match. Supports `*` globs and HTTP status\nclass patterns such as `\"2xx\"` and `\"4xx\"`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "path": {
+          "description": "JSON path to match (e.g. `\"body.created_at\"`, `\"headers.location\"`).",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "reason": {
+          "description": "Human-readable reason for suppression (not used in matching).",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "route": {
+          "description": "Route pattern to match. Supports `*` as a wildcard segment.\nExample: `\"POST /repos/*/statuses/*\"` or `\"GET /v1/users/:param\"`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    },
+    "FieldClassConfig": {
+      "description": "User-supplied field classification for conformance diffing.\n\nControls how a specific JSON path is compared during conformance checks.\n\n```toml\n[diff.fields.\"$.id\"]\nclassify = \"generated\"\n\n[diff.fields.\"$.status\"]\nclassify = \"enum\"\nvalues = [\"active\", \"inactive\", \"deleted\"]\n```",
+      "type": "object",
+      "properties": {
+        "classify": {
+          "description": "Classification: `\"generated\"`, `\"timestamp\"`, `\"enum\"`, `\"echoed\"`, `\"constant\"`.",
+          "type": "string"
+        },
+        "values": {
+          "description": "Allowed values when `classify = \"enum\"`.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "classify"
+      ]
+    },
+    "GenerateConfig": {
+      "description": "Agent-driven model generation settings (`[generate]`).",
+      "type": "object",
+      "properties": {
+        "anti_unification": {
+          "$ref": "#/$defs/AntiUnificationConfig",
+          "default": {
+            "array_length": "median",
+            "array_mode": "schema",
+            "drop_empty_array_responses": false,
+            "low_confidence_threshold": 0.2,
+            "max_array_representatives": 8,
+            "min_exchanges_per_route": 3
+          }
+        },
+        "dependent_cases": {
+          "$ref": "#/$defs/DependentCaseInferenceConfig",
+          "default": {
+            "allow": [],
+            "enabled": false,
+            "max_cases": 64,
+            "min_gain_bits": 1.0,
+            "min_observations": 4
+          }
+        },
+        "guard_inference": {
+          "$ref": "#/$defs/GuardInferenceConfig",
+          "default": {
+            "algorithm": "decision_tree",
+            "max_depth": 4,
+            "z3_minimization": false
+          }
+        },
+        "llm": {
+          "description": "LLM provider configuration for agent-driven generation.",
+          "$ref": "#/$defs/LlmConfig",
+          "default": {
+            "base_url": "http://localhost:11434",
+            "max_tokens": 4096,
+            "model": "qwen3.5:9b",
+            "provider": "ollama",
+            "temperature": 0.2,
+            "timeout_seconds": 120
+          }
+        },
+        "max_iterations": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 10,
+          "minimum": 0
+        },
+        "regression_tolerance": {
+          "type": "number",
+          "format": "double",
+          "default": 0.0
+        },
+        "request_keying": {
+          "$ref": "#/$defs/RequestKeyingConfig",
+          "default": {
+            "mode": "off",
+            "route": []
+          }
+        },
+        "route_normalization": {
+          "$ref": "#/$defs/RouteNormalizationConfig",
+          "default": {
+            "numeric_ids": true,
+            "prefix_pattern_ids": true,
+            "structural_alignment": false,
+            "value_flow_confirmation": true
+          }
+        },
+        "routing": {
+          "$ref": "#/$defs/RunnerRoutingConfig",
+          "default": {
+            "air_gapped": false,
+            "default_runner": null,
+            "fallback": []
+          }
+        },
+        "runners": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/RunnerConfig"
+          },
+          "default": {}
+        },
+        "symbolization": {
+          "$ref": "#/$defs/SymbolizationConfig",
+          "default": {
+            "entropy_threshold": 4.5,
+            "exclude_natural_language": true,
+            "exclude_urls": true,
+            "field_name_hinting": true,
+            "min_string_length": 4
+          }
+        },
+        "time_budget_minutes": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 30,
+          "minimum": 0
+        },
+        "token_budget": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 200000,
+          "minimum": 0
+        },
+        "type_inference": {
+          "$ref": "#/$defs/TypeInferenceConfig",
+          "default": {
+            "cross_route_unification": true,
+            "enum_max_values": 5,
+            "enum_min_samples": 3
+          }
+        }
+      }
+    },
+    "GuardAlgorithm": {
+      "description": "Guard inference strategy.",
+      "oneOf": [
+        {
+          "description": "Decision-tree inference.",
+          "type": "string",
+          "const": "decision_tree"
+        },
+        {
+          "description": "Rule-list inference.",
+          "type": "string",
+          "const": "rule_list"
+        }
+      ]
+    },
+    "GuardInferenceConfig": {
+      "description": "Guard inference for conditional response logic (`[generate.guard_inference]`).",
+      "type": "object",
+      "properties": {
+        "algorithm": {
+          "$ref": "#/$defs/GuardAlgorithm",
+          "default": "decision_tree"
+        },
+        "max_depth": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 4,
+          "minimum": 0
+        },
+        "z3_minimization": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "IdempotencyConfig": {
+      "description": "Idempotency-Key replay cache configuration (`[serve.idempotency]`).\n\nWhen `enabled` is true, POST requests carrying the configured header\n(default: `Idempotency-Key`) get their successful (2xx) responses cached\nper `(route_pattern, header_value)` tuple within the request's session\nnamespace. Repeat POSTs with the same key return the cached body / status\n/ headers verbatim (Date is refreshed on the way out by the renderer).\n\nDefault is `enabled = false` so non-Stripe twins don't inadvertently get\nthis behaviour surprise — opt-in per twin in `wraith.toml`.\n\n```toml\n[serve.idempotency]\nenabled = true\nheader = \"Idempotency-Key\"\nttl_seconds = 86400\n```\n\nSee bn-300b.",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "description": "Whether the idempotency cache is enabled. Default `false`.",
+          "type": "boolean",
+          "default": false
+        },
+        "header": {
+          "description": "HTTP header carrying the idempotency key. Stripe convention is\n`Idempotency-Key`; some APIs use other names.",
+          "type": "string",
+          "default": "Idempotency-Key"
+        },
+        "ttl_seconds": {
+          "description": "Cache entry TTL in seconds. Entries past this age are evicted lazily\non lookup (treated as misses). Default 86400 (24h).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 86400,
+          "minimum": 0
+        }
+      }
+    },
+    "LatencyConfig": {
+      "description": "Simulated latency configuration (`[serve.latency]`).",
+      "type": "object",
+      "properties": {
+        "max_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 5000,
+          "minimum": 0
+        },
+        "min_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 0,
+          "minimum": 0
+        },
+        "mode": {
+          "$ref": "#/$defs/ServeLatencyMode",
+          "default": "none"
+        },
+        "multiplier": {
+          "type": "number",
+          "format": "double",
+          "default": 1.0
+        }
+      }
+    },
+    "LimitsConfig": {
+      "description": "Resource limits for the twin server (`[serve.limits]`).",
+      "type": "object",
+      "properties": {
+        "max_entities_per_type": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 10000,
+          "minimum": 0
+        },
+        "max_namespaces": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 1000,
+          "minimum": 0
+        },
+        "max_total_state_mb": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 100,
+          "minimum": 0
+        },
+        "request_drain_timeout_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 5000,
+          "minimum": 0
+        }
+      }
+    },
+    "LlmConfig": {
+      "description": "LLM provider configuration from `[generate.llm]` in wraith.toml.",
+      "type": "object",
+      "properties": {
+        "api_key": {
+          "description": "API key for openai provider. Overridden by `WRAITH_LLM_API_KEY` env var.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "base_url": {
+          "description": "Base URL for HTTP-based providers.",
+          "type": "string",
+          "default": "http://localhost:11434"
+        },
+        "command": {
+          "description": "Command path for command provider.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "command_args": {
+          "description": "Arguments for command provider.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_tokens": {
+          "description": "Maximum tokens per completion.",
+          "type": "integer",
+          "format": "uint32",
+          "default": 4096,
+          "minimum": 0
+        },
+        "model": {
+          "description": "Model name (e.g. \"qwen3.5:9b\").",
+          "type": "string",
+          "default": "qwen3.5:9b"
+        },
+        "provider": {
+          "description": "Provider type: \"ollama\", \"openai\", or \"command\".",
+          "type": "string",
+          "default": "ollama"
+        },
+        "temperature": {
+          "description": "Sampling temperature (0.0–2.0).",
+          "type": "number",
+          "format": "double",
+          "default": 0.2
+        },
+        "timeout_seconds": {
+          "description": "Request timeout in seconds.",
+          "type": "integer",
+          "format": "uint64",
+          "default": 120,
+          "minimum": 0
+        }
+      }
+    },
+    "LuaConfig": {
+      "description": "Lua handler execution policy (`[serve.lua]`).\n\nControls how the runtime reacts when a Lua handler raises an uncaught\nerror mid-execution (string arithmetic, nil dereference, type error,\n`error(...)` call, runtime budget exceeded, etc.). See bn-1viq.\n\n```toml\n[serve.lua]\non_error = \"fail\"     # 500 + JSON error envelope (DEFAULT)\n# on_error = \"fallback\"  # legacy: drop the error, fall through to template\n```",
+      "type": "object",
+      "properties": {
+        "on_error": {
+          "description": "Behaviour on uncaught handler error. Default = `fail`.",
+          "$ref": "#/$defs/LuaOnError",
+          "default": "fail"
+        }
+      }
+    },
+    "LuaOnError": {
+      "description": "What to do when a Lua handler raises an uncaught error.\n\n`Fail` (the default since bn-1viq) returns HTTP 500 with a structured\nJSON envelope describing the failure — the failure is visible to\nclients and to test assertions on status code. `Fallback` falls through\nto the synth template engine, producing a synthetic response (often a\n201 Created with a random id). The template fallback hid real handler\nbugs from conformance tests, which is why it is now opt-in.",
+      "oneOf": [
+        {
+          "description": "Return HTTP 500 with a JSON error envelope. **Default.**",
+          "type": "string",
+          "const": "fail"
+        },
+        {
+          "description": "Log the error and fall through to template rendering (legacy\npre-bn-1viq behaviour). Opt-in for compatibility.",
+          "type": "string",
+          "const": "fallback"
+        }
+      ]
+    },
+    "MaxArrayReps": {
+      "description": "How many distinct array-element *representatives* anti-unification\nretains for a variable-length array.\n\nLength fidelity (`array_length`) and element *variety* are independent\naxes. `array_length = p90` recovers a ~500-long `content[]`, but if only\n8 distinct elements are retained the renderer tiles those 8 to length —\nlist-heavy UIs then show 8 rows repeated ~62×. This knob raises (or\nremoves) that cap. `Count(8)` is the historical default and is\nbyte-identical to pre-fix behaviour; raise it (or set `\"all\"`) for\ncatalog/search APIs whose recordings carry many distinct rows.\n\nAccepts an integer (`max_array_representatives = 500`) or the string\n`\"all\"` (`max_array_representatives = \"all\"`). The integer form is a\ndeterministic, size-bounded sample of up to N distinct elements in\nfirst-seen order — i.e. the \"sample up to K\" and \"configurable cap with\nall\" behaviours are one mechanism, not two.",
+      "oneOf": [
+        {
+          "description": "Retain a deterministic sample of up to N distinct elements\n(first-seen order). `Count(8)` is the back-compatible default.",
+          "type": "object",
+          "properties": {
+            "Count": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "Count"
+          ]
+        },
+        {
+          "description": "Retain every distinct observed element (unbounded).",
+          "type": "string",
+          "const": "All"
+        }
+      ]
+    },
+    "OverlayCapabilities": {
+      "description": "Capability toggles for overlay twins (`[capabilities]`).\n\nControls what modifications an overlay is permitted to make to its\nprovider twin's model. All fields default to reasonable values to prevent\naccidental data loss.",
+      "type": "object",
+      "properties": {
+        "add_fault_profiles": {
+          "description": "Allow adding new fault profiles. Default `true`.",
+          "type": "boolean",
+          "default": true
+        },
+        "add_fixture_sets": {
+          "description": "Allow adding new fixture sets. Default `true`.",
+          "type": "boolean",
+          "default": true
+        },
+        "add_lua_handlers": {
+          "description": "Allow adding Lua handlers. Default `false` (disabled by default for safety).",
+          "type": "boolean",
+          "default": false
+        },
+        "add_routes": {
+          "description": "Allow adding new routes. Default `true`.",
+          "type": "boolean",
+          "default": true
+        },
+        "add_schema_extensions": {
+          "description": "Allow adding schema extensions (new fields, new types). Default `true`.",
+          "type": "boolean",
+          "default": true
+        },
+        "add_variants": {
+          "description": "Allow adding new variants to existing routes. Default `true`.",
+          "type": "boolean",
+          "default": true
+        },
+        "override_fixtures": {
+          "description": "Allow overriding existing fixtures. Default `false`.",
+          "type": "boolean",
+          "default": false
+        },
+        "override_lua_handlers": {
+          "description": "Allow overriding existing Lua handlers. Default `false`.",
+          "type": "boolean",
+          "default": false
+        },
+        "override_variants": {
+          "description": "Allow overriding existing variants. Default `false`.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "OverlayConfig": {
+      "description": "Overlay metadata (`[overlay]`).\n\nOptional metadata describing the overlay twin, including ownership\nand dependencies on specific provider capabilities.",
+      "type": "object",
+      "properties": {
+        "description": {
+          "description": "Description of the overlay's purpose and scope.",
+          "type": "string"
+        },
+        "owner": {
+          "description": "Human-readable owner of the overlay (e.g. team name).",
+          "type": "string"
+        },
+        "requires": {
+          "description": "List of required provider capabilities (e.g. `[\"add_lua_handlers\"]`).",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "owner",
+        "description"
+      ]
+    },
+    "PassthroughConfig": {
+      "description": "Passthrough mode: forward unmatched requests to upstream (`[passthrough]`).",
+      "type": "object",
+      "properties": {
+        "allow": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "ProxyConfig": {
+      "description": "Recording proxy configuration (`[proxy]`).",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "description": "Proxy mode: `\"reverse\"` (default), `\"forward\"`, or `\"mitm\"`.",
+          "$ref": "#/$defs/ProxyMode",
+          "default": "reverse"
+        },
+        "port": {
+          "description": "Port the proxy listens on (default: 8080).",
+          "type": "integer",
+          "format": "uint16",
+          "default": 8080,
+          "maximum": 65535,
+          "minimum": 0
+        }
+      }
+    },
+    "ProxyMode": {
+      "description": "Proxy modes supported by recording.",
+      "oneOf": [
+        {
+          "description": "Forward requests to the upstream host (same host/port used as target).",
+          "type": "string",
+          "const": "reverse"
+        },
+        {
+          "description": "Start a forward proxy with proxy-style request handling.",
+          "type": "string",
+          "const": "forward"
+        },
+        {
+          "description": "Use forward proxy mode with explicit TLS interception.",
+          "type": "string",
+          "const": "mitm"
+        }
+      ]
+    },
+    "RateLimitEntry": {
+      "description": "A single rate-limit rule for a route pattern.",
+      "type": "object",
+      "properties": {
+        "limit": {
+          "description": "Maximum requests allowed in the window.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "window_seconds": {
+          "description": "Window duration in seconds.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "limit",
+        "window_seconds"
+      ]
+    },
+    "RecordingsConfig": {
+      "description": "Recording retention and size limits (`[recordings]`).",
+      "type": "object",
+      "properties": {
+        "max_body_size_mb": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 10,
+          "minimum": 0
+        },
+        "max_sessions": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 1000,
+          "minimum": 0
+        },
+        "max_total_size_mb": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 5000,
+          "minimum": 0
+        },
+        "pack_mode": {
+          "description": "Evidence level when packaging this twin as a `.wraith` archive.\n\n`none` (default): model only — suitable for internal CI.\n`manifests`: session metadata included; no WREC binary data.\n`scrubbed-full`: all recordings re-scrubbed and sealed; required for\n`wraith check --semantic` and cross-team promotion.",
+          "$ref": "#/$defs/RecordingsPackMode",
+          "default": "none"
+        },
+        "required_for_promotion": {
+          "description": "Whether recordings are required before this twin can be promoted to a\nshared registry. When `true` (the default), `wraith promote` requires\n`pack_mode = \"scrubbed-full\"` or an explicit external evidence location.",
+          "type": "boolean",
+          "default": true
+        },
+        "retention_days": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 90,
+          "minimum": 0
+        }
+      }
+    },
+    "RecordingsPackMode": {
+      "description": "Recording evidence level when packaging a twin as a `.wraith` archive.\n\nControls which recording files `wraith pack` includes. Defaults to `none`.\n\n```toml\n[recordings]\npack_mode = \"none\"           # no recordings (CI default)\n# pack_mode = \"manifests\"    # session metadata only, no WREC binary data\n# pack_mode = \"scrubbed-full\" # all recordings, scrubbed\n```",
+      "oneOf": [
+        {
+          "description": "No recording files in the archive. Default for internal CI consumption.",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "Session metadata files only (e.g. `manifest.json`). WREC binary data excluded.",
+          "type": "string",
+          "const": "manifests"
+        },
+        {
+          "description": "All recording files, re-scrubbed per the twin's `scrub.toml` before sealing.",
+          "type": "string",
+          "const": "scrubbed-full"
+        }
+      ]
+    },
+    "RefreshConfig": {
+      "description": "Drift-detection refresh settings (`[refresh]`).",
+      "type": "object",
+      "properties": {
+        "budget_requests": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 500,
+          "minimum": 0
+        },
+        "sample_strategy": {
+          "$ref": "#/$defs/SampleStrategy",
+          "default": "risk_weighted"
+        }
+      }
+    },
+    "RequestKeyRule": {
+      "description": "One explicit request-keying rule (`[[generate.request_keying.route]]`).",
+      "type": "object",
+      "properties": {
+        "fields": {
+          "description": "Request-body JSON paths (`$.a.b.c`) whose values key the response.\nMultiple fields form a composite key (`And` of `FieldEquals`), e.g.\n`[\"$.bulksearchv1AssetsInput.useCase\",\n  \"$.bulksearchv1AssetsInput.filter.parentId\"]`.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "route": {
+          "description": "`\"METHOD /path/pattern\"` (the synth path pattern, e.g.\n`\"POST /v1/assets/actions/search\"`; `:param` segments as synthesised).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "route",
+        "fields"
+      ]
+    },
+    "RequestKeyingConfig": {
+      "description": "Request-keyed response bucketing (`[generate.request_keying]`). (bn-3af5)",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/RequestKeyingMode",
+          "default": "off"
+        },
+        "route": {
+          "description": "Explicit per-route rules. Honoured under both `manual` and `auto`.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RequestKeyRule"
+          }
+        }
+      }
+    },
+    "RequestKeyingMode": {
+      "description": "Request-keyed response bucketing mode (`[generate.request_keying] mode`).\n\nWhen a route's response depends on a *request* field (a parent id, a\n`useCase` scope, a search filter) synth otherwise collapses every value\nto one global representative — expanding any tree node returns the same\npayload. This selects how synth recovers request→response correlation.",
+      "oneOf": [
+        {
+          "description": "No request keying — pre-bn-3af5 behaviour. Default (inert: the 23\nexisting twins are unaffected unless this is changed).",
+          "type": "string",
+          "const": "off"
+        },
+        {
+          "description": "Only explicit per-route [`RequestKeyRule`]s partition exchanges.",
+          "type": "string",
+          "const": "manual"
+        },
+        {
+          "description": "Explicit rules are honoured; routes without a rule additionally get\na conservative auto-detected request key when one strongly predicts\nthe response.",
+          "type": "string",
+          "const": "auto"
+        }
+      ]
+    },
+    "RouteNormalizationConfig": {
+      "description": "Route normalisation heuristics (`[generate.route_normalization]`).",
+      "type": "object",
+      "properties": {
+        "numeric_ids": {
+          "type": "boolean",
+          "default": true
+        },
+        "prefix_pattern_ids": {
+          "type": "boolean",
+          "default": true
+        },
+        "structural_alignment": {
+          "type": "boolean",
+          "default": false
+        },
+        "value_flow_confirmation": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "RunnerConfig": {
+      "description": "Configuration for a single LLM runner process.",
+      "type": "object",
+      "properties": {
+        "args": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "command": {
+          "type": "string"
+        },
+        "format": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "command"
+      ]
+    },
+    "RunnerRoutingConfig": {
+      "description": "LLM runner routing for agent-assisted synthesis (`[generate.routing]`).",
+      "type": "object",
+      "properties": {
+        "air_gapped": {
+          "type": "boolean",
+          "default": false
+        },
+        "default_runner": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "fallback": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "SampleStrategy": {
+      "description": "Sample strategy used during refresh planning.",
+      "oneOf": [
+        {
+          "description": "Risk-weighted sampling default.",
+          "type": "string",
+          "const": "risk_weighted"
+        },
+        {
+          "description": "Uniform random sampling.",
+          "type": "string",
+          "const": "random"
+        },
+        {
+          "description": "Coverage-biased sampling.",
+          "type": "string",
+          "const": "coverage"
+        }
+      ]
+    },
+    "ServeConfig": {
+      "description": "Twin HTTP server configuration (`[serve]`).",
+      "type": "object",
+      "properties": {
+        "clock": {
+          "description": "Clock-resolution policy for `created` / `created_at` / `updated_at`\nhole rendering (`[serve.clock]`). See [`ClockConfig`] and bn-2y5b.",
+          "$ref": "#/$defs/ClockConfig",
+          "default": {
+            "base_epoch": 1640995200,
+            "mode": "real"
+          }
+        },
+        "debug": {
+          "description": "Enable debug response headers.",
+          "type": "boolean",
+          "default": false
+        },
+        "deterministic_seed": {
+          "description": "Seed for deterministic random generation (default: 42).",
+          "type": "integer",
+          "format": "uint64",
+          "default": 42,
+          "minimum": 0
+        },
+        "fidelity": {
+          "description": "Response fidelity: `\"strict\"`, `\"synth\"`, or `\"permissive\"`.",
+          "$ref": "#/$defs/ServeFidelityMode",
+          "default": "synth"
+        },
+        "idempotency": {
+          "description": "Idempotency-Key replay cache (`[serve.idempotency]`). Disabled by\ndefault — non-Stripe twins shouldn't get this behaviour surprise.\nSee [`IdempotencyConfig`] and bn-300b.",
+          "$ref": "#/$defs/IdempotencyConfig",
+          "default": {
+            "enabled": false,
+            "header": "Idempotency-Key",
+            "ttl_seconds": 86400
+          }
+        },
+        "latency": {
+          "description": "Simulated latency settings.",
+          "$ref": "#/$defs/LatencyConfig",
+          "default": {
+            "max_ms": 5000,
+            "min_ms": 0,
+            "mode": "none",
+            "multiplier": 1.0
+          }
+        },
+        "limits": {
+          "description": "Resource limits for the twin server.",
+          "$ref": "#/$defs/LimitsConfig",
+          "default": {
+            "max_entities_per_type": 10000,
+            "max_namespaces": 1000,
+            "max_total_state_mb": 100,
+            "request_drain_timeout_ms": 5000
+          }
+        },
+        "lua": {
+          "description": "Lua handler execution policy (`[serve.lua]`). Controls what happens\nwhen a Lua handler raises an uncaught error during execution. The\ndefault (`on_error = \"fail\"`) is to return a 500 with a structured\nJSON error envelope — silent template fallback turns broken handlers\ninto looks-like-success 201s and hid the bug fixed in bn-1viq. Set\n`on_error = \"fallback\"` to opt back into the legacy behaviour.\nSee [`LuaConfig`] and bn-1viq.",
+          "$ref": "#/$defs/LuaConfig",
+          "default": {
+            "on_error": "fail"
+          }
+        },
+        "port": {
+          "description": "Port the twin server listens on (default: 8081).",
+          "type": "integer",
+          "format": "uint16",
+          "default": 8081,
+          "maximum": 65535,
+          "minimum": 0
+        },
+        "rate_limits": {
+          "description": "Per-route rate limit overrides.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/RateLimitEntry"
+          },
+          "default": {}
+        },
+        "rewrite_self_urls": {
+          "description": "Rewrite absolute upstream URLs in response bodies and the\n`Location:` header so they point back at the twin (default\n`true`).\n\nWhen `true`, any URL-shaped string in the response whose host\nmatches `service.base_url` gets its scheme + host swapped to\nmatch the incoming request's `Host` header. This stops clients\nfrom leaking off the twin and hitting the recorded upstream\nwhen they follow next-page links, related-resource URLs, etc.\nSee bn-2qi3.",
+          "type": "boolean",
+          "default": true
+        },
+        "session_mode": {
+          "description": "Session isolation mode: `\"header\"`, `\"cookie\"`, or `\"path\"`.",
+          "$ref": "#/$defs/SessionMode",
+          "default": "header"
+        },
+        "strip_headers": {
+          "description": "Strip non-allowlisted response headers on the way out (default `true`).\n\nWhen `true` (the default — see bn-2qi3), the twin only sends back\na small set of safe headers (`content-type`, `www-authenticate`,\n`proxy-authenticate`, `location`, `content-encoding`,\n`content-language`, and standard CORS headers). Vendor headers\nthe twin replays from the recorded upstream — Cloudflare's\n`cf-*`, `x-cache`, `x-served-by`, Express's `x-powered-by`,\n`nel`/`report-to`, etc. — get dropped because they confuse\nclient middleware (CORS, NEL, retry).\n\nSet to `false` to replay every header from the recording\nverbatim — useful when debugging upstream behavior, but not\nrecommended for normal client testing.",
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "ServeFidelityMode": {
+      "description": "Response fidelity mode used by runtime serving.",
+      "oneOf": [
+        {
+          "description": "Replay recorded responses verbatim.",
+          "type": "string",
+          "const": "strict"
+        },
+        {
+          "description": "Replay using synthesized model (future M4).",
+          "type": "string",
+          "const": "synth"
+        },
+        {
+          "description": "Legacy permissive mode; behavior is not yet implemented.",
+          "type": "string",
+          "const": "permissive"
+        }
+      ]
+    },
+    "ServeLatencyMode": {
+      "description": "Simulated latency mode used for runtime latency simulation.",
+      "oneOf": [
+        {
+          "description": "No artificial latency.",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "Replay recorded latencies for matched routes.",
+          "type": "string",
+          "const": "recorded"
+        },
+        {
+          "description": "Scale recorded latency by `multiplier`.",
+          "type": "string",
+          "const": "scaled"
+        },
+        {
+          "description": "Use fixed numeric latency.",
+          "type": "string",
+          "const": "fixed"
+        }
+      ]
+    },
+    "ServiceConfig": {
+      "description": "Upstream service identity.",
+      "type": "object",
+      "properties": {
+        "base_url": {
+          "description": "Base URL of the upstream API (e.g. `https://api.stripe.com`).",
+          "type": "string"
+        },
+        "name": {
+          "description": "Human-readable twin name (used as directory name under `twins/`).",
+          "type": "string"
+        },
+        "spec": {
+          "description": "Optional path to an `OpenAPI` spec file.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "user_agent": {
+          "description": "User-Agent header string for HTTP requests (default: `wraith/0.1.7`).",
+          "type": "string",
+          "default": "wraith/0.13.0"
+        }
+      },
+      "required": [
+        "name",
+        "base_url"
+      ]
+    },
+    "SessionMode": {
+      "description": "Session isolation mode used for per-request state segmentation.",
+      "oneOf": [
+        {
+          "description": "One session per API credential in a shared HTTP header.",
+          "type": "string",
+          "const": "header"
+        },
+        {
+          "description": "One session per `Cookie` header value.",
+          "type": "string",
+          "const": "cookie"
+        },
+        {
+          "description": "One session per path prefix.",
+          "type": "string",
+          "const": "path"
+        }
+      ]
+    },
+    "SymbolizationConfig": {
+      "description": "Symbolisation heuristics for identifying dynamic values (`[generate.symbolization]`).",
+      "type": "object",
+      "properties": {
+        "entropy_threshold": {
+          "type": "number",
+          "format": "double",
+          "default": 4.5
+        },
+        "exclude_natural_language": {
+          "type": "boolean",
+          "default": true
+        },
+        "exclude_urls": {
+          "type": "boolean",
+          "default": true
+        },
+        "field_name_hinting": {
+          "type": "boolean",
+          "default": true
+        },
+        "min_string_length": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 4,
+          "minimum": 0
+        }
+      }
+    },
+    "TaggedUnionPolicyRule": {
+      "description": "Operator override of the unknown-tag fallback policy for tagged unions.\n\nTargets one or more tagged-union scopes by `route` and/or `scope` glob\nand replaces the synthesized (default `reject_unknown`)\n[`FallbackPolicy`](crate::cli::synth::FallbackPolicy). Unset fields act as\nwildcards; the default behavior (no rule) stays fail-closed.\n\n```toml\n[[diff.tagged_union_policy]]\nroute = \"GET /v1/events\"\nscope = \"body.data[*].data.object\"\npolicy = \"fallback_common_schema\"\nreason = \"Stripe adds event types continuously\"\n```",
+      "type": "object",
+      "properties": {
+        "policy": {
+          "description": "Policy to apply: `reject_unknown`, `fallback_common_schema`, or\n`replay_representative`. Unrecognized values are ignored with a warning.",
+          "type": "string",
+          "default": ""
+        },
+        "reason": {
+          "description": "Human-readable reason for the override (not used in matching).",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "route": {
+          "description": "Route pattern to match. Supports `*` as a wildcard segment.\nExample: `\"GET /v1/events\"`. Absent = any route.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "scope": {
+          "description": "Union scope path in differ form (e.g. `\"body.data[*].data.object\"`).\nSupports `*` globs. Absent = any scope.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        }
+      }
+    },
+    "ThresholdConfig": {
+      "description": "Per-dimension conformance thresholds (`[diff.thresholds]`).",
+      "type": "object",
+      "properties": {
+        "body_structure": {
+          "type": "number",
+          "format": "double",
+          "default": 0.9
+        },
+        "body_values": {
+          "type": "number",
+          "format": "double",
+          "default": 0.85
+        },
+        "header_conformance": {
+          "type": "number",
+          "format": "double",
+          "default": 0.8
+        },
+        "status_exact_match": {
+          "type": "boolean",
+          "default": true
+        },
+        "symbol_consistency": {
+          "type": "number",
+          "format": "double",
+          "default": 1.0
+        }
+      }
+    },
+    "ThresholdOverride": {
+      "description": "Per-route threshold overrides (`[diff.overrides.\"METHOD /path\"]`).",
+      "type": "object",
+      "properties": {
+        "body_structure": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "body_values": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "header_conformance": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        },
+        "symbol_consistency": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double"
+        }
+      }
+    },
+    "TypeInferenceConfig": {
+      "description": "Type inference for enum and pattern detection (`[generate.type_inference]`).",
+      "type": "object",
+      "properties": {
+        "cross_route_unification": {
+          "type": "boolean",
+          "default": true
+        },
+        "enum_max_values": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 5,
+          "minimum": 0
+        },
+        "enum_min_samples": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 3,
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
