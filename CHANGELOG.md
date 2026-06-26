@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.14.0 — 2026-06-26
+
+**Editor autocomplete for `wraith.toml` and `scrub.toml`, reliability fixes across conformance and serving, and an experimental opt-in way to model collections whose element shape depends on a sibling field.** New twins get config autocomplete for free; existing twins re-synth and re-serve unchanged.
+
+### What changed for you
+
+- **Config autocomplete and validation.** `wraith.toml` and `scrub.toml` now have published JSON Schemas, and `wraith init` writes a `#:schema` line at the top of each new config file. Editors with TOML support (anything backed by Taplo — VS Code's Even Better TOML, Zed, Neovim, …) pick it up automatically for key completion, inline docs, and error highlighting. For an existing config, copy the `#:schema` header from a freshly `wraith init`'d file.
+- **Fewer false conformance failures and cleaner replays.** HEAD requests no longer return a body; state-backed reads keep their dynamic response headers; reading an object from unseeded state returns the recorded success response instead of a spurious 404; and structural IDs in path segments are turned into route parameters more reliably. Credit-card scrubbing no longer mangles UUIDs, and Lua-handler output is passed through untouched.
+- **Clearer Lua handler binding.** Handler files named with hyphens or camelCase now match their routes (normalized to snake_case), `wraith init` drops in a naming-convention README, and `wraith serve` warns when a handler you loaded binds to zero routes — so a misnamed file no longer fails silently.
+- **(Experimental) dependent-case modeling.** For collections where one field's *shape* depends on a sibling discriminator — e.g. a Stripe event's `data` shape depends on its `type`, or a GitHub event's `payload` on its `type` — Wraith can now model each case separately. It is **off by default** and only applies to the route + field pairs you explicitly list under `[generate.dependent_cases]` in `wraith.toml`, so nothing changes unless you opt in.
+
+### Should I do anything?
+
+Nothing required. Re-run `wraith init` (or copy the `#:schema` header) to get config autocomplete in your editor, and re-run `wraith synth` / `wraith generate` to pick up the conformance fixes. The dependent-case feature is opt-in only.
+
 ## v0.13.0 — 2026-06-24
 
 **Wraith now models APIs that return mixed collections of different object types — like Stripe's event stream — instead of flattening them into one lossy shape.** When an array or nested field holds different resource types selected by a discriminator (e.g. each Stripe event's `data.object` is a `customer`, a `price`, a `product`, …), Wraith learns a separate schema for each case. Type-specific fields that used to vanish because they were rare across the whole collection are preserved, and conformance compares each element against its own type. On the Stripe events endpoint this removes about 555 false "missing field" failures. The feature turns on automatically only where it applies — homogeneous lists and existing twins are unchanged.

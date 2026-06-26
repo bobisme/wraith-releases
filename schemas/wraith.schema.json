@@ -1486,7 +1486,7 @@
         "user_agent": {
           "description": "User-Agent header string for HTTP requests (default: `wraith/0.1.7`).",
           "type": "string",
-          "default": "wraith/0.13.0"
+          "default": "wraith/0.14.0"
         }
       },
       "required": [
