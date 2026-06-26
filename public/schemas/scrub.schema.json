@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ScrubConfig",
+  "description": "Top-level `scrub.toml` configuration.\n\nControls the 3-layer scrubbing pipeline: built-in rules, user-defined\nrules, and HMAC tokenisation. All scrubbing happens at write time\nbefore any recording hits disk.",
+  "type": "object",
+  "properties": {
+    "defaults": {
+      "description": "Global scrub defaults.",
+      "$ref": "#/$defs/DefaultsConfig",
+      "default": {
+        "scrub_auth_headers": true,
+        "scrub_cookies": true,
+        "tokenize_mode": "hmac"
+      }
+    },
+    "pii": {
+      "description": "PII-detection policy (consumed by `wraith doctor`).",
+      "$ref": "#/$defs/PiiConfig",
+      "default": {
+        "allowlist": [],
+        "default_action": "tokenize",
+        "detect": true,
+        "fields": {
+          "always": []
+        }
+      }
+    },
+    "rules": {
+      "description": "User-defined scrub rules (applied after built-in rules).",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ScrubRule"
+      }
+    }
+  },
+  "$defs": {
+    "ApplyTarget": {
+      "description": "Restricts where a regex scrub rule is applied.",
+      "oneOf": [
+        {
+          "description": "Scan HTTP header values.",
+          "type": "string",
+          "const": "header_values"
+        },
+        {
+          "description": "Scan request/response bodies.",
+          "type": "string",
+          "const": "body"
+        },
+        {
+          "description": "Scan URL query strings.",
+          "type": "string",
+          "const": "query"
+        }
+      ]
+    },
+    "DefaultsConfig": {
+      "description": "Global scrub defaults (`[defaults]`).",
+      "type": "object",
+      "properties": {
+        "scrub_auth_headers": {
+          "type": "boolean",
+          "default": true
+        },
+        "scrub_cookies": {
+          "type": "boolean",
+          "default": true
+        },
+        "tokenize_mode": {
+          "$ref": "#/$defs/TokenizeMode",
+          "default": "hmac"
+        }
+      }
+    },
+    "PiiAction": {
+      "description": "What to do with a PII match at scrub-write time.\n\n**Not yet enforced** — parsed and stored only. Doctor uses\n[`PiiConfig::allowlist`] for suppression and ignores this field.",
+      "oneOf": [
+        {
+          "description": "Replace with a deterministic HMAC token.",
+          "type": "string",
+          "const": "tokenize"
+        },
+        {
+          "description": "Replace with `[REDACTED]`.",
+          "type": "string",
+          "const": "redact"
+        },
+        {
+          "description": "Refuse to write the recording at all (hard fail).",
+          "type": "string",
+          "const": "reject"
+        }
+      ]
+    },
+    "PiiConfig": {
+      "description": "PII-detection policy section (`[pii]`).\n\nConsulted by `wraith doctor`'s PII audit pass: if `detect = false` the\naudit is skipped wholesale; otherwise each candidate finding's location\n(a JSON-pointer-ish path like `request.body.user.email` or\n`$.routes[0].response_template.author.email`) is checked against\n`allowlist`, and matching paths are suppressed.\n\n`default_action` is parsed and round-trip-stable, but is not yet wired\ninto scrub-on-write — that is a follow-up bone. Doctor never consults\nit.",
+      "type": "object",
+      "properties": {
+        "allowlist": {
+          "description": "JSON-path-ish glob patterns that bypass PII detection. A finding is\nsuppressed if its location matches any pattern via\n[`pii_path_matches`]. Patterns may start with `$` (anchor stripped\nbefore matching) and may contain `*` to match a single path segment.\nSee [`pii_path_matches`] for the supported grammar.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "default_action": {
+          "description": "Action used when emitting scrubbed PII at write time. Parsed and\npreserved for round-trip but not yet enforced — see TODO in\n`capture/scrub.rs`. Defaults to [`PiiAction::Tokenize`].",
+          "$ref": "#/$defs/PiiAction",
+          "default": "tokenize"
+        },
+        "detect": {
+          "description": "Master toggle. When false, doctor skips the PII audit pass entirely\n(other doctor checks still run).",
+          "type": "boolean",
+          "default": true
+        },
+        "fields": {
+          "description": "Per-field manual overrides (bn-1p6v). `fields.always` lists JSON paths\nthat are *always* treated as PII regardless of cardinality detection\nor value-shape heuristics. The complement of `allowlist`. Used when\nauto-detection misclassifies a real PII field as enum (e.g. a small\nfixture where every entity has 'Alice').",
+          "$ref": "#/$defs/PiiFieldsConfig",
+          "default": {
+            "always": []
+          }
+        }
+      }
+    },
+    "PiiFieldsConfig": {
+      "description": "Per-field manual overrides for PII detection (bn-1p6v).\n\n`always` entries take precedence over both the cardinality-detected enum\nset (`RouteModel.enum_paths`) and the static\n`capture::pii::DEFAULT_NAME_KEY_ALLOWLIST` — but NOT over [`PiiConfig::allowlist`],\nwhich remains the highest-precedence layer (its semantics from bn-2fdz\nare preserved). The chain is documented on\n[`crate::capture::pii::scrub_pii_in_json_confident`] and\n[`crate::doctor::checks::run_pii_audit`].\n\nTOML shape:\n```toml\n[pii.fields]\nalways = [\n  \"$.author.email\",\n  \"$.viewer.name\",\n]\n```\n\nPatterns use the same `pii_path_matches` grammar as `[pii] allowlist`:\n`*` matches one path segment, leading `$` is anchor-stripped, matching\nis suffix-based.",
+      "type": "object",
+      "properties": {
+        "always": {
+          "description": "JSON paths that are unconditionally treated as PII. Empty by default.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ScrubAction": {
+      "description": "Action to take when a scrub rule matches.",
+      "oneOf": [
+        {
+          "description": "Replace with deterministic HMAC token (`wraith_tok_<base62>`).",
+          "type": "string",
+          "const": "tokenize"
+        },
+        {
+          "description": "Replace with user-supplied mask string.",
+          "type": "string",
+          "const": "mask"
+        },
+        {
+          "description": "Replace with `[REDACTED]`.",
+          "type": "string",
+          "const": "redact"
+        },
+        {
+          "description": "Replace with a stable pseudonym (`user_<base62>`).\n\nLike [`Self::Tokenize`] this is a deterministic HMAC-SHA256 of the\nmatched value with the recording's HMAC key, but emits a `user_`-prefixed\nenvelope intended for human-identity replacement (e.g. real GitHub\nusernames in URL path segments). Idempotent: applying the action to an\nalready-pseudonymized value (`user_<base62>`) returns it unchanged so\nre-running the scrub pass — at record, synth, export, or pack time —\nproduces stable output. See bn-280e.",
+          "type": "string",
+          "const": "pseudonymize"
+        }
+      ]
+    },
+    "ScrubRule": {
+      "description": "A user-defined scrub rule (`[[rules]]`).",
+      "type": "object",
+      "properties": {
+        "action": {
+          "description": "What to do with matched values.",
+          "$ref": "#/$defs/ScrubAction"
+        },
+        "apply_to": {
+          "description": "Restrict matching to specific locations (default: all).",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/ApplyTarget"
+          }
+        },
+        "match": {
+          "description": "Pattern to match (exact name for header/cookie/query, `JSONPath`, or regex).",
+          "type": "string"
+        },
+        "replacement": {
+          "description": "Replacement string (required for `mask` action).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "scope": {
+          "description": "Where to look for the match (header, cookie, jsonpath, regex, query param).",
+          "$ref": "#/$defs/ScrubScope"
+        }
+      },
+      "required": [
+        "scope",
+        "match",
+        "action"
+      ]
+    },
+    "ScrubScope": {
+      "description": "Where a scrub rule looks for matches.",
+      "oneOf": [
+        {
+          "description": "Match by HTTP header name (case-insensitive).",
+          "type": "string",
+          "const": "header"
+        },
+        {
+          "description": "Match by cookie name.",
+          "type": "string",
+          "const": "cookie"
+        },
+        {
+          "description": "Match by `JSONPath` expression in request/response bodies.",
+          "type": "string",
+          "const": "jsonpath"
+        },
+        {
+          "description": "Match by regex anywhere in the exchange.",
+          "type": "string",
+          "const": "regex"
+        },
+        {
+          "description": "Match by URL query parameter name.",
+          "type": "string",
+          "const": "query_param"
+        }
+      ]
+    },
+    "TokenizeMode": {
+      "description": "How matched secret values are replaced.",
+      "oneOf": [
+        {
+          "description": "Replace with deterministic HMAC token (`wraith_tok_<base62>`).",
+          "type": "string",
+          "const": "hmac"
+        },
+        {
+          "description": "Replace with `[REDACTED]`.",
+          "type": "string",
+          "const": "redact"
+        },
+        {
+          "description": "Replace with a user-supplied mask string.",
+          "type": "string",
+          "const": "mask"
+        }
+      ]
+    }
+  }
+}
