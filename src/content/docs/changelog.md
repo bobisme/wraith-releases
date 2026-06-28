@@ -3,6 +3,29 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.15.0 - 2026-06-28
+
+**You can now generate an intent contract straight from a twin's recordings — no hand-writing Lua — and `wraith serve` binds both IPv4 and IPv6 loopback by default.** The contract building blocks shipped earlier; this release turns them into commands, so going from recorded traffic to a packable `.wic` is a single step. Everything is additive — existing twins, packs, and contracts are unaffected.
+
+### What changed for you
+
+- **Generate a contract from recordings: `wraith contract propose <twin>`.** Point it at a twin you've recorded and it writes a ready-to-pack contract — one scenario per distinct workflow it sees across your sessions, with the request flow and inferred value round-trips (e.g. an id created in one call and reused in the next) turned into checks. Those inferred checks are **advisory** (`sigil.check`): they record pass/fail but never fail a run, so you review and promote the ones you actually want to enforce to `expect()` before they gate anything. Narrow the evidence with `--tag` or `--from-session`, and the output is byte-identical run to run. Then pack it as usual:
+  ```sh
+  wraith contract propose billing --out ./staged \
+    --consumer checkout-service --provider billing-api --owner checkout-team \
+    --base billing-api@sha256:… --overlay checkout-billing@sha256:…
+  wraith contract pack ./staged --output checkout.wic --key ./signing.key
+  ```
+- **Start a contract by hand: `wraith contract scaffold <dir>`.** Writes a ready-to-edit skeleton (manifest, the pinned helper, one placeholder scenario) for when you'd rather author scenarios yourself than generate them.
+- **Manage the helper: `wraith contract helper`.** Emit or verify the canonical `lib/wraith.lua` helper that every contract embeds.
+- **Contract manifest schema published.** `wraith schema` now also emits the contract package (`.wic`) manifest schema.
+- **Truer generated contracts.** Scenarios drafted from recordings now keep request query parameters and explicit `null` body fields instead of dropping them, and `wraith contract inspect` now reports the correct live/candidate check breakdown for a packed contract (it previously listed every check as unparsed).
+- **`wraith serve` is dual-stack by default.** It now binds both `127.0.0.1` and `::1`, so `localhost` reaches the twin on either address family, and `--listen` accepts IPv6 literals and `host:port` (e.g. `[::1]:8181`). Binding a non-loopback address such as `0.0.0.0` now requires `--control-token-env` — without it `wraith serve` refuses with a security-violation exit — and serve warns when another process already holds the port on the other address family.
+
+### Should I do anything?
+
+Nothing required. If you write intent contracts, try `wraith contract propose <twin>` to draft one from your recordings, then review and promote its advisory checks before packing. If you bind `wraith serve` to a non-loopback address, you'll now need to pass `--control-token-env`.
+
 ## v0.14.0 - 2026-06-26
 
 **Editor autocomplete for `wraith.toml` and `scrub.toml`, reliability fixes across conformance and serving, and an experimental opt-in way to model collections whose element shape depends on a sibling field.** New twins get config autocomplete for free; existing twins re-synth and re-serve unchanged.

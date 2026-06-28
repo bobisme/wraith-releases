@@ -29,13 +29,34 @@ Intent contracts shipped in v0.10.0. They are **purely additive**: every v0.9.x 
 - **A provider wants to know who depends on what.** Accepted contracts under `contracts/<consumer>/` are a living, machine-readable map of downstream expectations — each with a gating decision the provider controls.
 - **You need verification without sharing recordings.** The default evidence mode is `reference_only`: the contract carries scenarios and digests, not your captured traffic. Scrubbed-excerpt and full-recording modes exist but must be admitted explicitly at accept time.
 
+## Author a contract
+
+You don't have to write scenarios by hand. The fastest path is to **generate** one from a twin you've already recorded (added in v0.15.0):
+
+```sh
+wraith contract propose billing --out ./staged \
+  --consumer checkout-service --provider billing-api --owner checkout-team \
+  --base billing-api@sha256:… --overlay checkout-billing@sha256:…
+```
+
+`propose` reads the twin's recordings and writes a staged contract directory — one scenario per distinct workflow it sees across your sessions, with the request flow and any inferred value round-trips (an id created in one call and reused in the next, a field echoed back) turned into checks. The inferred checks are **advisory** (`sigil.check`): they record pass/fail but never fail a run. Review them, promote the ones you mean to enforce to `expect()`, then pack. Restrict the evidence with `--tag` or `--from-session`, and the output is byte-identical run to run.
+
+Prefer to write scenarios yourself? Scaffold an empty skeleton instead:
+
+```sh
+wraith contract scaffold ./staged \
+  --consumer checkout-service --provider billing-api --owner checkout-team \
+  --base billing-api@sha256:… --overlay checkout-billing@sha256:…
+```
+
+That writes a ready-to-edit staged directory — the manifest, the pinned `lib/wraith.lua` helper, and one placeholder scenario to fill in. (`wraith contract helper` emits or verifies that helper on its own.) Either path leaves you with a staged directory ready to pack.
+
 ## The `.wic` package
 
 A `.wic` is a deterministic, Ed25519-signed tar archive. Packing the same staged directory twice produces byte-identical output; unpacking verifies the content-tree digest and the signature against the embedded key.
 
 ```sh
-# Author scenarios in a staged dir (manifest + scenarios/ + the helper),
-# then pack a signed contract:
+# Once you have a staged dir (from propose or scaffold), pack a signed contract:
 wraith contract pack ./staged --output checkout-refund.wic --key ./signing.key
 
 # Inspect what's inside; --strict runs the trust-gate lint:
@@ -120,7 +141,10 @@ When the provider re-records and the base digest advances, `wraith contract reba
 ## Full workflow
 
 ```sh
-# Consumer: author, pack, share
+# Consumer: generate from recordings (or scaffold by hand), pack, share
+wraith contract propose billing --out ./staged \
+  --consumer checkout-service --provider billing-api --owner checkout-team \
+  --base billing-api@sha256:abc --overlay checkout-billing@sha256:def
 wraith contract pack ./staged --output checkout-refund.wic --key ./signing.key
 wraith contract inspect checkout-refund.wic --strict
 
