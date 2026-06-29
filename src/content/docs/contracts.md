@@ -65,18 +65,45 @@ wraith contract inspect checkout-refund.wic --strict
 
 Pack runs a PII scan over the whole bundle before sealing it. A sensitive literal aborts the pack (`exit 3`) and names the offending file; admit it knowingly with `--override-pii <reason>`, which is recorded in the manifest so the provider's accept gate sees the decision.
 
+## Set up trust: keys, signing, and the policy allowlist
+
+`verify` composes the base + overlay twins under the default compose policy, which requires **signed** twin packs and an **allowlisted** scrub policy. These are hard security gates (`--no-strict` does not relax them), so a real overlay needs three one-time setup steps before `verify` goes green:
+
+1. **A keypair.** `wraith key gen` prints a base64 secret (for signing) and the matching public key (for the trust store). Persist both.
+   ```sh
+   wraith key gen --format json   # -> { key: { secret_b64, public_b64, key_id } }
+   ```
+2. **Signed packs with a reproducible digest.** Sign the base and overlay packs that `verify` will compose. Set a persistent `WRAITH_HMAC_KEY` **first** — without it each `pack` generates an ephemeral key, so the content digest changes every run and the contract's pinned `[base].digest` goes stale.
+   ```sh
+   export WRAITH_HMAC_KEY=<persisted base64>      # reproducible content digests
+   wraith pack billing           --output base.wraith --key <secret_b64>
+   wraith pack checkout-billing  --output ov.wraith   --key <secret_b64>
+   ```
+3. **Allowlist the overlay's scrub policy.** If the overlay ships its own scrub rules, list its policy hash so the compose gate admits it. (An overlay that inherits the base's `scrub.toml` **unchanged** is admitted automatically — no entry needed.)
+   ```sh
+   # the hash is exposed in the pack envelope:
+   wraith pack checkout-billing --output ov.wraith --format json | jq -r .pack.base.scrub_policy_hash
+   ```
+   ```toml
+   # .wraith/overlay-policy.toml
+   [overlay_policy]
+   allowed_scrub_policy_hashes = ["sha256:…"]
+   ```
+   The policy file has a published schema — `wraith schema` emits `overlay-policy.schema.json` for editor validation.
+
 ## Verify against your own twin
 
 `verify` is the heart of the loop. It resolves the manifest's pinned artifacts to your local packs, composes and serves the twin, runs the contract's scenarios through `sigil`, and reports a CI-ready envelope.
 
 ```sh
 wraith contract verify checkout-refund.wic \
-  --base-pack billing-api.wraith \
-  --overlay-pack checkout-billing.wraith \
+  --base-pack base.wraith \
+  --overlay-pack ov.wraith \
+  --overlay-policy .wraith/overlay-policy.toml \
   --format json
 ```
 
-`--pack-dir <dir>` auto-resolves the pinned base and overlay artifacts by digest, so you can point at a directory of `.wraith` packs instead of naming each one; a pin that no flag or directory satisfies is a resolution error that names the exact digest it needs.
+`--overlay-policy <file>` hands the compose step your trust policy (the `allowed_scrub_policy_hashes` from the setup above); omit it and `verify` auto-discovers `<base>/.wraith/overlay-policy.toml` when the base pack carries one. `--pack-dir <dir>` auto-resolves the pinned base and overlay artifacts by digest, so you can point at a directory of `.wraith` packs instead of naming each one; a pin that no flag or directory satisfies is a resolution error that names the exact digest it needs. When compose rejects the composition, `verify` (and `rebase-check`) now surface the underlying finding — e.g. `base-digest-mismatch` with both digests, or `scrub-policy-not-allowlisted` — instead of a generic failure.
 
 ### Exit codes
 
@@ -141,6 +168,9 @@ When the provider re-records and the base digest advances, `wraith contract reba
 ## Full workflow
 
 ```sh
+# One-time: a signing keypair
+wraith key gen --format json   # persist secret_b64 (sign) + public_b64 (trust store)
+
 # Consumer: generate from recordings (or scaffold by hand), pack, share
 wraith contract propose billing --out ./staged \
   --consumer checkout-service --provider billing-api --owner checkout-team \
@@ -148,9 +178,14 @@ wraith contract propose billing --out ./staged \
 wraith contract pack ./staged --output checkout-refund.wic --key ./signing.key
 wraith contract inspect checkout-refund.wic --strict
 
-# Provider: verify in CI, then accept and gate
+# Provider: sign the twin packs (persistent WRAITH_HMAC_KEY -> stable digests),
+# allowlist the overlay's scrub policy, then verify in CI and accept
+export WRAITH_HMAC_KEY=<persisted base64>
+wraith pack billing          --output base.wraith --key <secret_b64>
+wraith pack checkout-billing --output ov.wraith   --key <secret_b64>
 wraith contract verify checkout-refund.wic \
-  --base-pack billing-api.wraith --overlay-pack checkout-billing.wraith --format json
+  --base-pack base.wraith --overlay-pack ov.wraith \
+  --overlay-policy .wraith/overlay-policy.toml --format json
 wraith contract accept checkout-refund.wic --trust-store ./trusted-signers
 wraith contract set-status blocking --consumer checkout-service --name checkout-refund
 
