@@ -3,6 +3,24 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.16.0 - 2026-06-29
+
+**You can now sign and verify an intent contract locally, end-to-end.** v0.15.0 made *authoring* a `.wic` great; this release makes *verifying* one work without guesswork — generate a signing key, sign your twin packs, hand `verify` a trust policy, and read the real reason when a check fails. Additive — existing twins, packs, and contracts are unaffected.
+
+### What changed for you
+
+- **Make a signing keypair: `wraith key gen`.** Prints a base64 secret (to sign with) and the matching public key (for a provider's trust store); `--seed` gives a reproducible key for tests.
+- **Sign twin packs with a flag: `wraith pack --key <KEY|PATH>`.** Twin (`.wraith`) packs now sign the same way contract packs do — previously this was only possible via an undocumented `WRAITH_SIGN_KEY` env var (now documented too). Signing never changes the content digest, so it can't invalidate a pin.
+- **Hand `verify` your trust policy: `wraith contract verify --overlay-policy <file>`.** An overlay that ships its own scrub policy used to be unverifiable locally — `verify` always ran the built-in default. Now you supply a policy that allowlists it (or drop it at `<base>/.wraith/overlay-policy.toml` and verify finds it). An overlay that inherits the base's scrub policy unchanged is allowlisted automatically.
+- **Real failure reasons.** `verify` and `rebase-check` now tell you *why* composition failed — a stale base pin (`base-digest-mismatch`, with both digests), a missing allowlist entry, an unsigned overlay — instead of a generic error.
+- **Editor validation for the policy file.** `wraith schema` now emits `overlay-policy.schema.json` for the `.wraith/overlay-policy.toml` format.
+- **Friendlier compose & init.** `wraith compose --base/--overlay` accept a bare twin name like other commands, and a freshly `init --base`'d overlay composes immediately (as a no-op) before you've recorded anything.
+- **Reproducible pins.** `wraith pack --help` now explains that stable `[base].digest` pins need a persistent `WRAITH_HMAC_KEY` — without one, every re-pack changes the digest.
+
+### Should I do anything?
+
+Nothing required. To verify a contract locally the loop is now: `wraith key gen` → sign your base and overlay packs (`wraith pack --key`, with a persistent `WRAITH_HMAC_KEY`) → allowlist the overlay's scrub policy → `wraith contract verify --overlay-policy`. See the [Intent contracts guide](/contracts/) for the full sign → allowlist → verify walkthrough.
+
 ## v0.15.0 - 2026-06-28
 
 **You can now generate an intent contract straight from a twin's recordings — no hand-writing Lua — and `wraith serve` binds both IPv4 and IPv6 loopback by default.** The contract building blocks shipped earlier; this release turns them into commands, so going from recorded traffic to a packable `.wic` is a single step. Everything is additive — existing twins, packs, and contracts are unaffected.
