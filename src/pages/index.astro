@@ -589,6 +589,54 @@ import { LATEST_VERSION } from '../version.ts';
   </section>
 
   <!-- ============================================================
+       ASK AI
+       ============================================================ -->
+  <section class="section tight">
+    <div class="container">
+      <div class="section-head">
+        <div class="section-tag">&sect;06 &middot; <span>ask ai</span></div>
+        <h2 class="section-title">Ask AI about <em>wraith</em>.</h2>
+      </div>
+
+      <p class="askai-lede">
+        Open your assistant of choice with the question pre-filled and let it explain what
+        wraith is, how recorded-traffic twins work, and whether it fits your stack.
+      </p>
+
+      <ul class="askai">
+        <li class="ai">
+          <a href="https://chatgpt.com/?q=Tell%20me%20about%20https%3A%2F%2Fwraith.cx%2C%20a%20tool%20for%20building%20high-fidelity%20service%20mocks%20from%20recorded%20traffic." target="_blank" rel="noopener" data-track="ask_ai_click">
+            <span class="ai-name">ChatGPT</span>
+            <span class="ai-meta">OpenAI &rsaquo;</span>
+          </a>
+        </li>
+        <li class="ai">
+          <a href="https://claude.ai/new?q=Tell%20me%20about%20https%3A%2F%2Fwraith.cx%2C%20a%20tool%20for%20building%20high-fidelity%20service%20mocks%20from%20recorded%20traffic." target="_blank" rel="noopener" data-track="ask_ai_click">
+            <span class="ai-name">Claude</span>
+            <span class="ai-meta">Anthropic &rsaquo;</span>
+          </a>
+        </li>
+        <li class="ai">
+          <a href="https://www.perplexity.ai/search?q=Tell%20me%20about%20https%3A%2F%2Fwraith.cx%2C%20a%20tool%20for%20building%20high-fidelity%20service%20mocks%20from%20recorded%20traffic." target="_blank" rel="noopener" data-track="ask_ai_click">
+            <span class="ai-name">Perplexity</span>
+            <span class="ai-meta">search &rsaquo;</span>
+          </a>
+        </li>
+        <li class="ai">
+          <a href="https://grok.com/?q=Tell%20me%20about%20https%3A%2F%2Fwraith.cx%2C%20a%20tool%20for%20building%20high-fidelity%20service%20mocks%20from%20recorded%20traffic." target="_blank" rel="noopener" data-track="ask_ai_click">
+            <span class="ai-name">Grok</span>
+            <span class="ai-meta">xAI &rsaquo;</span>
+          </a>
+        </li>
+      </ul>
+
+      <p class="askai-prompt">
+        prompt &middot; <span>&ldquo;Tell me about https://wraith.cx, a tool for building high-fidelity service mocks from recorded traffic.&rdquo;</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================
        FOOTER
        ============================================================ -->
   <footer class="site-footer">
@@ -1199,6 +1247,43 @@ import { LATEST_VERSION } from '../version.ts';
   }
 
   /* =======================================================
+     Ask AI
+     ======================================================= */
+  .askai-lede {
+    font-size: 16px; line-height: 1.6; color: var(--ink-dim);
+    max-width: 56ch; margin: 0 0 32px;
+  }
+  .askai {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--line);
+    border: 1px solid var(--line); border-radius: 4px; overflow: hidden;
+    list-style: none; padding: 0; margin: 0;
+  }
+  .askai .ai { background: var(--bg-1); }
+  .askai .ai a {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 12px; padding: 24px 28px;
+    text-decoration: none;
+    transition: background .2s;
+  }
+  .askai .ai a:hover { background: var(--bg-2); }
+  .askai .ai-name {
+    font-family: var(--font-serif); font-size: 22px;
+    font-weight: 400; letter-spacing: -.01em; color: var(--ink);
+  }
+  .askai .ai a:hover .ai-name { color: var(--ghost); }
+  .askai .ai-meta {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--ink-faint); letter-spacing: .08em;
+  }
+  .askai-prompt {
+    margin: 20px 0 0;
+    font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: .06em; color: var(--ink-faint);
+  }
+  .askai-prompt span { color: var(--ink-mute); }
+
+  /* =======================================================
      Footer
      ======================================================= */
   .site-footer {
@@ -1249,6 +1334,7 @@ import { LATEST_VERSION } from '../version.ts';
     .features { grid-template-columns: repeat(2, 1fr); }
     .usecases { grid-template-columns: 1fr; }
     .protocols { grid-template-columns: repeat(2, 1fr); }
+    .askai { grid-template-columns: repeat(2, 1fr); }
     .fit-list { grid-template-columns: 1fr; }
     .section-head { grid-template-columns: 1fr; gap: 16px; }
   }
@@ -1268,6 +1354,7 @@ import { LATEST_VERSION } from '../version.ts';
   @media (max-width: 560px) {
     .features { grid-template-columns: 1fr; }
     .protocols { grid-template-columns: 1fr; }
+    .askai { grid-template-columns: 1fr; }
     .footer-inner { grid-template-columns: 1fr; }
     .cta-row { flex-direction: column; align-items: stretch; }
     .trust-row { gap: 16px; }
