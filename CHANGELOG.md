@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.18.0 — 2026-07-01
+
+**A twin can no longer invent an entity without telling you — and you can make it refuse outright.** Until now, a twin under default fidelity would answer a request for an entity that never existed with a confident, fully-shaped 200, indistinguishable from recorded truth. A human notices eventually; an agent builds on the fabrication and ships. This release stamps every response with where it came from, and adds an opt-in mode where unknown entities fail closed instead of being synthesized. Additive — existing twins behave identically unless you opt in.
+
+### What changed for you
+
+- **Every response carries a provenance header.** `X-Wraith-Provenance: recorded | template | handler | fixture | fault` tells you — or your agent harness — whether the body was replayed from a captured exchange, synthesized from the model beyond any recording, produced by a Lua handler, seeded from fixtures, or injected as a fault. Two companions: `X-Wraith-Route` names the matched route template, and `X-Wraith-Exchange: <session>/<index>` points back at the exact recorded exchange when provenance is `recorded`. On by default; opt out with `--no-provenance-headers` or `[serve] provenance_headers = false`. (The per-field summary header from v0.17.0's `--debug` mode is renamed `X-Wraith-Provenance-Counts`.)
+- **Opt-in fail-closed entity lookups.** With `wraith serve --unknown-entity not_found` (or `[serve] unknown_entity = "not_found"`), a path-parameterized read of an id the twin has never seen — not in its recordings, its fixtures, or state created this session — returns the provider's own recorded 404 shape when one was captured, else a structured 501. No more fabricated 200s. Recommended for agent-facing sandboxes; the default stays `synthesize`, so human dev loops are unchanged.
+- **Route misses are machine-actionable.** A request that matches no route still gets a 501, but the body now says why: the twin's name, its route templates (up to 20, with a total count), and a hint pointing at `wraith coverage`. An agent harness can report the coverage gap without shelling into the workspace.
+- **`[REDACTED]` no longer leaks into responses.** Fields destroyed by record-time redaction used to serve the literal placeholder. They now render deterministic, shape-plausible values (a UUID for id-shaped fields, hex tokens otherwise); tokenized `wraith_tok_*` values are untouched.
+- **The response contract is documented.** One reference page covers the full hits-and-misses table — route hit/miss, entity hit/miss per mode, every `X-Wraith-*` header, and how fidelity modes interact with all of it. `wraith serve --help` points to it under RESPONSE CONTRACT.
+
+### Should I do anything?
+
+Re-run `wraith synth` on existing twins when you want the new features at full fidelity — models synthesized before 0.18.0 lack the known-id index (fail-closed mode falls back to coarser misses) and the exchange-id sources behind `X-Wraith-Exchange`. Everything else works immediately. If a client middleware chokes on unexpected response headers, `--no-provenance-headers` restores the old wire shape. One known limitation: on routes with multiple path parameters, the known-id index keys on the last segment only.
+
 ## v0.17.0 — 2026-07-01
 
 **Twins can no longer lie to you quietly.** Hand-written handler output is now checked against recorded evidence, every served field can tell you whether it came from a recording or from someone's keyboard, and a stale twin can be made to fail CI. Plus: record a twin from synthetic traffic alone, an auditable scrub report inside every pack, and session cookies scrubbed by default. Additive — existing twins behave identically unless you opt in, with one deliberate exception below.
