@@ -25,6 +25,7 @@ These always run and cannot be disabled by `scrub.toml`:
 |---------------|------------------------------------------------------------|----------|
 | `header`      | `authorization`                                            | tokenize |
 | `header`      | `cookie`                                                   | tokenize |
+| `header`      | `set-cookie` (since v0.17.0: every cookie **value** in the response header; names and attributes like `Path`/`Expires`/`HttpOnly` preserved) | tokenize |
 | `header`      | `x-api-key`                                                | tokenize |
 | `query_param` | `api_key`, `secret`, `password`, `token`, `access_token`, `refresh_token`, `client_secret` | tokenize |
 | `regex`       | `\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b` (16-digit card pattern) | redact (replaced with `[REDACTED]`) |

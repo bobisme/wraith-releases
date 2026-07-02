@@ -103,7 +103,7 @@ wraith contract verify checkout-refund.wic \
   --format json
 ```
 
-`--overlay-policy <file>` hands the compose step your trust policy (the `allowed_scrub_policy_hashes` from the setup above); omit it and `verify` auto-discovers `<base>/.wraith/overlay-policy.toml` when the base pack carries one. `--pack-dir <dir>` auto-resolves the pinned base and overlay artifacts by digest, so you can point at a directory of `.wraith` packs instead of naming each one; a pin that no flag or directory satisfies is a resolution error that names the exact digest it needs. When compose rejects the composition, `verify` (and `rebase-check`) now surface the underlying finding — e.g. `base-digest-mismatch` with both digests, or `scrub-policy-not-allowlisted` — instead of a generic failure.
+`--overlay-policy <file>` hands the compose step your trust policy (the `allowed_scrub_policy_hashes` from the setup above) — since v0.17.0, `--policy` works as an alias, matching `wraith compose --policy`; omit it and `verify` auto-discovers `<base>/.wraith/overlay-policy.toml` when the base pack carries one. `--pack-dir <dir>` auto-resolves the pinned base and overlay artifacts by digest, so you can point at a directory of `.wraith` packs instead of naming each one; a pin that no flag or directory satisfies is a resolution error that names the exact digest it needs. When compose rejects the composition, `verify` (and `rebase-check`) now surface the underlying finding — e.g. `base-digest-mismatch` with both digests, or `scrub-policy-not-allowlisted` — instead of a generic failure.
 
 ### Exit codes
 

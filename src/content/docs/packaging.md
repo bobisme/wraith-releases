@@ -49,6 +49,12 @@ By default `wraith pack` ships only the model and configuration — recordings s
 
 Every JSON model file is re-scrubbed through the pack pipeline before being sealed (the same scrub layers `wraith record` ran on the way in, applied again as defense-in-depth). The manifest records the scrub policy hash so the recipient can confirm what posture the archive was packed under.
 
+Since v0.17.0 the archive also embeds a human-readable **scrub report** — per-rule match counts, affected field names and routes, the PII-scan verdict, and the scrub-policy hash — covered by the pack's signature. A recipient's security reviewer renders it without unpacking:
+
+```sh
+wraith inspect stripe-0.9.0.wraith --scrub-report
+```
+
 ```sh
 # Pack a twin to share with another team, including the source recordings
 # so they can re-synth if they want to change synth settings.
@@ -70,8 +76,11 @@ Verify the archive without extracting it. Checks:
 - Every artifact's recorded digest matches the actual bytes.
 - The wraith version that produced the archive is compatible with the version running the check.
 - PII findings: any obvious secrets that survived scrub get reported.
+- The Ed25519 signature, when the archive is signed and you supply a trust key (`--trust-store <dir>` or `WRAITH_VERIFY_KEY`).
 
 `verify-pack` emits a `VALID`, `WARN`, or `INVALID` verdict on stdout. Pass `--strict` to promote `WARN` to `INVALID` (useful in CI).
+
+The signature line distinguishes four states (since v0.17.0): `signature=ok` (verified), `FAIL` (verification failed), `unverifiable` (the archive **is** signed but you supplied no trust key — a warning advice tells you how), and `unsigned` (no signature at all). Previously a signed-but-unchecked archive was misleadingly labeled `unsigned`.
 
 ```sh
 # CI gate: only ship the archive if verify-pack is strictly clean.

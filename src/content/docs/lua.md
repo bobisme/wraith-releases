@@ -239,6 +239,19 @@ In `fail` mode, an uncaught handler error returns HTTP 500 with a structured env
 
 In `fallback` mode (legacy), the error is logged and dispatch falls through to the synth template. This hides bugs and is opt-in only for compatibility with twins authored before `on_error` shipped.
 
+## Your handler's output is checked
+
+Since v0.17.0, `wraith check` compares your handler's raw output against the shape of the recorded responses for the route. A structural slip — a mis-cased field name, a missing key, a wrong type — fails the check with a named `authored_deviation` finding instead of shipping silently. Deviations you *mean* (serving an empty collection your workflow doesn't need, say) are declared in `wraith.toml`:
+
+```toml
+[[deviations]]
+route = "GET /assets/:id"
+path = "$.comparisonSegments"
+reason = "segments unused in this workflow"
+```
+
+While migrating, `[handlers] deviation_policy = "warn"` reports without failing. Details in [Conformance & drift](/conformance/#authored-output-deviations-lua-handlers--fixtures). Provenance-wise, handler-served fields are classed `authored` in check's fiction-ratio report — a reviewer can see at a glance how much of a twin is hand-written vs recorded.
+
 ## When NOT to use Lua
 
 - **Echo a field from the request into the response.** Synth's value-flow graph detects request echoes algorithmically — let it. Writing a Lua handler for this is more brittle than the inferred template.

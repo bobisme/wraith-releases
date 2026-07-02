@@ -36,6 +36,9 @@ Each scenario's steps are sent via async reqwest. The output reports per-step ou
 | `--against`        | Optional live URL to execute scenarios against           |
 | `--header`         | Repeatable `"Name: Value"` headers for auth              |
 | `--max-scenarios`  | Cap the number of scenarios (safety bound)               |
+| `--record`         | Capture executed exchanges as a WREC session (requires `--against` and `--twin`) |
+| `--twin`           | Twin to record into (`twins/<NAME>/recordings/sessions/<run-id>/`) |
+| `--tag`            | Extra session tags, in addition to the automatic `explore` + `synthetic` tags |
 | `--format`         | Output format: `pretty`, `text`, `json` (auto-detects)   |
 
 ### JSON output shape
@@ -78,13 +81,27 @@ Each scenario's steps are sent via async reqwest. The output reports per-step ou
 
 ### Preview vs. recording
 
-`--against` does **not** capture WRECs. It's a preview / smoke check - useful for "does this spec actually describe the service" or "which operations are live?" For real recordings, use `wraith record` and exercise the twin the usual way. The two tools complement each other:
+By default `--against` does **not** capture WRECs — it's a preview / smoke check, useful for "does this spec actually describe the service" or "which operations are live?"
+
+Since v0.17.0, add `--record --twin <name>` and the executed scenarios are captured as a normal recording session — same scrub-on-write pipeline as `wraith record`, tagged `explore` + `synthetic` for provenance — ready for `wraith synth`:
+
+```sh
+# Twin a service from synthetic traffic only (no real data ever touches it)
+wraith init myapi --base-url https://staging.example.com
+wraith explore --from-openapi spec.yaml \
+  --against https://staging.example.com \
+  --record --twin myapi
+wraith synth myapi
+wraith check myapi
+```
+
+This is the data-safety shortcut: for services where recording *real* traffic is blocked, drive a safe environment with synthesized requests and twin the shapes. It doesn't replace real-traffic fidelity — synthesized scenarios exercise the spec's happy paths, not your production distribution — but it gets a usable twin with zero exposure. For real recordings, `wraith record` remains the tool:
 
 ```sh
 # 1. Preview: does the spec match reality?
 wraith explore --from-openapi petstore.yaml --against https://api.example.com
 
-# 2. Record: capture the traffic for the twin
+# 2. Record: capture real traffic for the twin
 wraith record myapi --port 8080
 # ... exercise the API through the proxy ...
 

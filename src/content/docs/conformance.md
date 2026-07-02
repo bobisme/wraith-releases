@@ -171,6 +171,43 @@ reason = "upstream adds new enum values often; not a schema break"
 
 `wraith.toml` suppressions act before drift classification. `drift.toml` acts after. Both are visible to `--show-suppressed`.
 
+## Authored-output deviations (Lua handlers & fixtures)
+
+Since v0.17.0, routes served by a [Lua handler](/lua/) get an extra check: the handler's **raw output** is compared against the shape of the recorded responses for that route. A structural deviation — a mis-cased field name, a missing key, a wrong type, a status the recordings never produced — is reported as an `authored_deviation` finding, and an *unmarked* one fails the run with exit 2 **even when the conformance score passes**. This closes the "confidently wrong twin" gap: before v0.17.0 a handler emitting `licenseAgreementID` where every recording said `licenseAgreementId` shipped at a perfect score.
+
+Intentional deviations are declared in `wraith.toml` — same glob matching as `[[diff.suppress]]`, but `reason` is required and the meaning is different: this is *declared intent*, not noise suppression.
+
+```toml
+[[deviations]]
+route = "GET /assets/:id"
+path = "$.comparisonSegments"
+reason = "segments unused in this workflow; handler serves an empty list"
+```
+
+A marked deviation passes the gate, and value-level divergences at or under the marked path are exempted from scoring (listed by `--show-suppressed`). If you want the findings reported without failing builds — e.g. while triaging after an upgrade — set the migration valve:
+
+```toml
+[handlers]
+deviation_policy = "warn"   # default is "error"
+```
+
+In JSON output the findings are in `.conformance.authored_deviations[]`, each with `marked` and the matched rule's reason.
+
+## Freshness SLA
+
+A twin recorded 47 days ago serves with the same confidence as one recorded yesterday — unless you make staleness a gate. Add a `[freshness]` section to `wraith.toml`:
+
+```toml
+[freshness]
+max_age   = "30d"    # SLA: check fails (exit 2) when the newest recording is older
+warn_age  = "14d"    # advisory: warning advice past this
+max_drift = 0.05     # optional: max fraction of drifted routes from the latest refresh
+```
+
+`wraith check` then fails with `twin-stale` / `twin-drift-exceeded` advice when the SLA is violated, and `wraith doctor` reports the same verdict; the JSON envelope carries the verdict under `.freshness.status` (`fresh | warn | stale`). Without a `[freshness]` section nothing changes.
+
+Age is also visible at serve time regardless of config: `wraith serve` prints a startup banner with the twin's age, stamps `X-Wraith-Twin-Age` / `X-Wraith-Recorded-At` on every response, and reports the same fields in `--ready-json` and `/__wraith/info`. The intended CI loop: `wraith refresh` re-records on a schedule, and `wraith check` with a `[freshness]` SLA makes sure a rotting twin can't pass silently.
+
 ## `--show-suppressed`
 
 ```sh

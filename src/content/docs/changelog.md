@@ -3,6 +3,39 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.17.0 - 2026-07-01
+
+**Twins can no longer lie to you quietly.** Hand-written handler output is now checked against recorded evidence, every served field can tell you whether it came from a recording or from someone's keyboard, and a stale twin can be made to fail CI. Plus: record a twin from synthetic traffic alone, an auditable scrub report inside every pack, and session cookies scrubbed by default. Additive — existing twins behave identically unless you opt in, with one deliberate exception below.
+
+### What changed for you
+
+- **Lua/fixture output is now conformance-gated.** `wraith check` compares what your Lua handlers actually serve against the shape of the recorded responses. A structural slip — a mis-cased field name, a missing key, a wrong type — used to ship silently at a perfect score; now it fails `check` (exit 2) with a named `authored_deviation` finding telling you the exact path. When a deviation is *intentional* (your handler deliberately serves an empty collection, say), declare it in `wraith.toml` and it passes:
+  ```toml
+  [[deviations]]
+  route = "GET /assets/:id"
+  path = "$.comparisonSegments"
+  reason = "segments unused in this workflow"
+  ```
+  Not ready to fail builds on this? Set `[handlers] deviation_policy = "warn"` to report without failing. See the [Lua handlers guide](/lua/) for details.
+- **Every served field has provenance.** Fields are classified `recorded | synthesized | echoed | authored | fixture`. `wraith check` reports per-route counts and an overall **fiction ratio** — how much of your twin is authored fiction vs recorded evidence — so a reviewer can judge how much to trust a twin at a glance. `wraith serve --debug` adds an `X-Wraith-Provenance` summary header; with `--trace --debug` the trace endpoints carry full per-field origin maps.
+- **Staleness is loud, and can be a gate.** `wraith serve` now tells you how old a twin is — a startup banner, `X-Wraith-Twin-Age` / `X-Wraith-Recorded-At` headers on every response, and the same fields in `--ready-json` and `/__wraith/info`. To *enforce* freshness, add an SLA to `wraith.toml`:
+  ```toml
+  [freshness]
+  max_age  = "30d"   # check fails (exit 2) past this
+  warn_age = "14d"   # advisory warning past this
+  ```
+  `wraith check` fails with `twin-stale` advice when violated and `wraith doctor` reports the same verdict — point your nightly CI at it and a rotting twin can't pass silently. See [Conformance & drift](/conformance/).
+- **Twin a service from synthetic traffic: `wraith explore --record`.** Scenario runs generated from an OpenAPI spec are now captured as normal scrubbed recording sessions (tagged `synthetic`), ready for `wraith synth`. For services where you can't record real traffic for data-safety reasons, this sidesteps the problem entirely — no real data ever touches the twin. See [OpenAPI seed mode](/openapi/).
+- **Session cookies are scrubbed by default.** `set-cookie` header values (session tokens, CSRF tokens) — previously the most common way a live credential survived into a recording — are now tokenized on write, with cookie names and attributes preserved. Conformance is unaffected.
+- **Packs carry an auditable scrub report.** `wraith pack` embeds a human-readable report of what was scrubbed (per-rule match counts, affected fields and routes, the PII-scan verdict, the scrub-policy hash), covered by the pack's signature. Render it with `wraith inspect <pack> --scrub-report` — a security reviewer can now assess a twin's data-safety without unpacking it.
+- **Truer state replay.** Create requests keep a client-supplied primary key instead of always generating one; PATCH deep-merges nested objects (arrays replace, `null` deletes) instead of replacing them wholesale; values you POST are no longer tokenized when the response echoes them back; list routes apply equality filters from query params (`?status=active` now actually filters); and bare-array list routes serve created state.
+- **`verify-pack` no longer calls a signed archive "unsigned".** A signed pack checked without a trust key now reports `signature=unverifiable` with a hint (`--trust-store` / `WRAITH_VERIFY_KEY`), distinct from a genuinely unsigned pack.
+- **Small paper cuts.** `wraith contract verify` / `rebase-check` accept `--policy` as an alias for `--overlay-policy` (matching `wraith compose --policy`), and `wraith init --base`'s next-steps hint no longer recommends a flag that doesn't exist.
+
+### Should I do anything?
+
+If you use Lua handlers or fixtures: run `wraith check` after upgrading. A previously silent shape mismatch in authored output will now fail — that's the feature. Fix the handler, or declare the deviation with a `[[deviations]]` entry, or set `[handlers] deviation_policy = "warn"` while you triage. Everything else is opt-in or automatic.
+
 ## v0.16.0 - 2026-06-29
 
 **You can now sign and verify an intent contract locally, end-to-end.** v0.15.0 made *authoring* a `.wic` great; this release makes *verifying* one work without guesswork — generate a signing key, sign your twin packs, hand `verify` a trust policy, and read the real reason when a check fails. Additive — existing twins, packs, and contracts are unaffected.
