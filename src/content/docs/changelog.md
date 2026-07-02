@@ -3,6 +3,22 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.18.2 — 2026-07-02
+
+**Fail-closed now works on the twins that need it most.** An external consumer re-validated 0.18.1 against a real recorded, read-only provider corpus and found both marquee features silently inert on that shape. Both are fixed and that corpus profile is now a permanent release gate. Fixes only, no new surfaces.
+
+### What changed for you
+
+- **Fail-closed engages on read-only corpora.** `--unknown-entity not_found` used to depend on CRUD evidence a read-only recorded corpus never has, so it silently did nothing on exactly the flagship shape. It now keys on path-parameterized routes plus the recorded known-id index, independent of CRUD classification. Re-run `wraith synth` for it to take effect.
+- **No more silent no-op on a safety flag.** If you request `not_found` and no route can honor it (e.g. a pre-0.18 model), `wraith serve` warns loudly at startup — stderr, `--ready-json` advice, and `/__wraith/info` — instead of quietly serving synthesized 200s.
+- **Recorded 404s with empty bodies replay.** Empty and non-JSON recorded responses were dropped from the exact-match replay index, so a recorded not-found could come back as a fabricated 200. They now replay verbatim in every mode. Re-synth required.
+- **`[REDACTED]` never reaches consumers.** Placeholders — baked into recordings at record time or introduced at serve time by the outbound scrub — are substituted with deterministic, shape-plausible values on every synthesized response path. Strict fidelity stays byte-faithful.
+- **A read-only recorded corpus is now a release gate.** The exact profile that found these bugs (recorded, read-only, scrubbed, zero CRUD evidence) is fresh-synthed, served, and asserted on every build.
+
+### Should I do anything?
+
+Re-run `wraith synth` on your twins — the fail-closed and empty-body-404 fixes both live in the re-synthesized model indexes. If you serve agent-facing twins, set `--unknown-entity not_found` and watch the startup output: any warning means your model needs the re-synth.
+
 ## v0.18.1 - 2026-07-02
 
 **The fail-closed guarantee now holds on nested routes.** A patch release hardening what v0.18.0 shipped: fixes only, no new surfaces.
@@ -43,21 +59,25 @@ Re-run `wraith synth` on existing twins when you want the new features at full f
 
 ### What changed for you
 
-- **Lua/fixture output is now conformance-gated.** `wraith check` compares what your Lua handlers actually serve against the shape of the recorded responses. A structural slip — a mis-cased field name, a missing key, a wrong type — used to ship silently at a perfect score; now it fails `check` (exit 2) with a named `authored_deviation` finding telling you the exact path. When a deviation is *intentional* (your handler deliberately serves an empty collection, say), declare it in `wraith.toml` and it passes:
+- **Lua/fixture output is now conformance-gated.** `wraith check` compares what your Lua handlers actually serve against the shape of the recorded responses. A structural slip — a mis-cased field name, a missing key, a wrong type — used to ship silently at a perfect score; now it fails `check` (exit 2) with a named `authored_deviation` finding telling you the exact path. When a deviation is _intentional_ (your handler deliberately serves an empty collection, say), declare it in `wraith.toml` and it passes:
+
   ```toml
   [[deviations]]
   route = "GET /assets/:id"
   path = "$.comparisonSegments"
   reason = "segments unused in this workflow"
   ```
+
   Not ready to fail builds on this? Set `[handlers] deviation_policy = "warn"` to report without failing. See the [Lua handlers guide](/lua/) for details.
 - **Every served field has provenance.** Fields are classified `recorded | synthesized | echoed | authored | fixture`. `wraith check` reports per-route counts and an overall **fiction ratio** — how much of your twin is authored fiction vs recorded evidence — so a reviewer can judge how much to trust a twin at a glance. `wraith serve --debug` adds an `X-Wraith-Provenance` summary header; with `--trace --debug` the trace endpoints carry full per-field origin maps.
-- **Staleness is loud, and can be a gate.** `wraith serve` now tells you how old a twin is — a startup banner, `X-Wraith-Twin-Age` / `X-Wraith-Recorded-At` headers on every response, and the same fields in `--ready-json` and `/__wraith/info`. To *enforce* freshness, add an SLA to `wraith.toml`:
+- **Staleness is loud, and can be a gate.** `wraith serve` now tells you how old a twin is — a startup banner, `X-Wraith-Twin-Age` / `X-Wraith-Recorded-At` headers on every response, and the same fields in `--ready-json` and `/__wraith/info`. To _enforce_ freshness, add an SLA to `wraith.toml`:
+
   ```toml
   [freshness]
   max_age  = "30d"   # check fails (exit 2) past this
   warn_age = "14d"   # advisory warning past this
   ```
+
   `wraith check` fails with `twin-stale` advice when violated and `wraith doctor` reports the same verdict — point your nightly CI at it and a rotting twin can't pass silently. See [Conformance & drift](/conformance/).
 - **Twin a service from synthetic traffic: `wraith explore --record`.** Scenario runs generated from an OpenAPI spec are now captured as normal scrubbed recording sessions (tagged `synthetic`), ready for `wraith synth`. For services where you can't record real traffic for data-safety reasons, this sidesteps the problem entirely — no real data ever touches the twin. See [OpenAPI seed mode](/openapi/).
 - **Session cookies are scrubbed by default.** `set-cookie` header values (session tokens, CSRF tokens) — previously the most common way a live credential survived into a recording — are now tokenized on write, with cookie names and attributes preserved. Conformance is unaffected.
@@ -72,14 +92,14 @@ If you use Lua handlers or fixtures: run `wraith check` after upgrading. A previ
 
 ## v0.16.0 - 2026-06-29
 
-**You can now sign and verify an intent contract locally, end-to-end.** v0.15.0 made *authoring* a `.wic` great; this release makes *verifying* one work without guesswork — generate a signing key, sign your twin packs, hand `verify` a trust policy, and read the real reason when a check fails. Additive — existing twins, packs, and contracts are unaffected.
+**You can now sign and verify an intent contract locally, end-to-end.** v0.15.0 made _authoring_ a `.wic` great; this release makes _verifying_ one work without guesswork — generate a signing key, sign your twin packs, hand `verify` a trust policy, and read the real reason when a check fails. Additive — existing twins, packs, and contracts are unaffected.
 
 ### What changed for you
 
 - **Make a signing keypair: `wraith key gen`.** Prints a base64 secret (to sign with) and the matching public key (for a provider's trust store); `--seed` gives a reproducible key for tests.
 - **Sign twin packs with a flag: `wraith pack --key <KEY|PATH>`.** Twin (`.wraith`) packs now sign the same way contract packs do — previously this was only possible via an undocumented `WRAITH_SIGN_KEY` env var (now documented too). Signing never changes the content digest, so it can't invalidate a pin.
 - **Hand `verify` your trust policy: `wraith contract verify --overlay-policy <file>`.** An overlay that ships its own scrub policy used to be unverifiable locally — `verify` always ran the built-in default. Now you supply a policy that allowlists it (or drop it at `<base>/.wraith/overlay-policy.toml` and verify finds it). An overlay that inherits the base's scrub policy unchanged is allowlisted automatically.
-- **Real failure reasons.** `verify` and `rebase-check` now tell you *why* composition failed — a stale base pin (`base-digest-mismatch`, with both digests), a missing allowlist entry, an unsigned overlay — instead of a generic error.
+- **Real failure reasons.** `verify` and `rebase-check` now tell you _why_ composition failed — a stale base pin (`base-digest-mismatch`, with both digests), a missing allowlist entry, an unsigned overlay — instead of a generic error.
 - **Editor validation for the policy file.** `wraith schema` now emits `overlay-policy.schema.json` for the `.wraith/overlay-policy.toml` format.
 - **Friendlier compose & init.** `wraith compose --base/--overlay` accept a bare twin name like other commands, and a freshly `init --base`'d overlay composes immediately (as a no-op) before you've recorded anything.
 - **Reproducible pins.** `wraith pack --help` now explains that stable `[base].digest` pins need a persistent `WRAITH_HMAC_KEY` — without one, every re-pack changes the digest.
@@ -95,12 +115,14 @@ Nothing required. To verify a contract locally the loop is now: `wraith key gen`
 ### What changed for you
 
 - **Generate a contract from recordings: `wraith contract propose <twin>`.** Point it at a twin you've recorded and it writes a ready-to-pack contract — one scenario per distinct workflow it sees across your sessions, with the request flow and inferred value round-trips (e.g. an id created in one call and reused in the next) turned into checks. Those inferred checks are **advisory** (`sigil.check`): they record pass/fail but never fail a run, so you review and promote the ones you actually want to enforce to `expect()` before they gate anything. Narrow the evidence with `--tag` or `--from-session`, and the output is byte-identical run to run. Then pack it as usual:
+
   ```sh
   wraith contract propose billing --out ./staged \
     --consumer checkout-service --provider billing-api --owner checkout-team \
     --base billing-api@sha256:… --overlay checkout-billing@sha256:…
   wraith contract pack ./staged --output checkout.wic --key ./signing.key
   ```
+
 - **Start a contract by hand: `wraith contract scaffold <dir>`.** Writes a ready-to-edit skeleton (manifest, the pinned helper, one placeholder scenario) for when you'd rather author scenarios yourself than generate them.
 - **Manage the helper: `wraith contract helper`.** Emit or verify the canonical `lib/wraith.lua` helper that every contract embeds.
 - **Contract manifest schema published.** `wraith schema` now also emits the contract package (`.wic`) manifest schema.
@@ -120,7 +142,7 @@ Nothing required. If you write intent contracts, try `wraith contract propose <t
 - **Config autocomplete and validation.** `wraith.toml` and `scrub.toml` now have published JSON Schemas, and `wraith init` writes a `#:schema` line at the top of each new config file. Editors with TOML support (anything backed by Taplo — VS Code's Even Better TOML, Zed, Neovim, …) pick it up automatically for key completion, inline docs, and error highlighting. For an existing config, copy the `#:schema` header from a freshly `wraith init`'d file.
 - **Fewer false conformance failures and cleaner replays.** HEAD requests no longer return a body; state-backed reads keep their dynamic response headers; reading an object from unseeded state returns the recorded success response instead of a spurious 404; and structural IDs in path segments are turned into route parameters more reliably. Credit-card scrubbing no longer mangles UUIDs, and Lua-handler output is passed through untouched.
 - **Clearer Lua handler binding.** Handler files named with hyphens or camelCase now match their routes (normalized to snake_case), `wraith init` drops in a naming-convention README, and `wraith serve` warns when a handler you loaded binds to zero routes — so a misnamed file no longer fails silently.
-- **(Experimental) dependent-case modeling.** For collections where one field's *shape* depends on a sibling discriminator — e.g. a Stripe event's `data` shape depends on its `type`, or a GitHub event's `payload` on its `type` — Wraith can now model each case separately. It is **off by default** and only applies to the route + field pairs you explicitly list under `[generate.dependent_cases]` in `wraith.toml`, so nothing changes unless you opt in.
+- **(Experimental) dependent-case modeling.** For collections where one field's _shape_ depends on a sibling discriminator — e.g. a Stripe event's `data` shape depends on its `type`, or a GitHub event's `payload` on its `type` — Wraith can now model each case separately. It is **off by default** and only applies to the route + field pairs you explicitly list under `[generate.dependent_cases]` in `wraith.toml`, so nothing changes unless you opt in.
 
 ### Should I do anything?
 
@@ -135,6 +157,7 @@ Nothing required. Re-run `wraith init` (or copy the `#:schema` header) to get co
 - **Heterogeneous collections are modeled per type.** Wraith detects when a collection's elements (or a nested object) vary by a discriminator field (`object`, `type`, `kind`, `__typename`, …) and synthesizes a schema for each observed type. A field that only appears on one type — say `unit_amount` on a `price` — is no longer dropped just because it's rare across the whole list.
 - **More accurate conformance on mixed lists.** `wraith check` matches each element to its type before comparing, so a reordered or differently-sampled collection no longer produces spurious missing/extra-field noise. Clearer divergences now call out an unknown or missing type tag instead of a wall of field mismatches.
 - **Control over types you haven't recorded.** Real APIs keep adding new event and resource types. By default Wraith flags an unrecorded type as a divergence (fail-closed), and `wraith check` tells you which type it saw. You can relax this per route in `wraith.toml`:
+
   ```toml
   [[diff.tagged_union_policy]]
   route = "GET /v1/events"
@@ -338,7 +361,7 @@ v0.8.0 correctly synthesized `access-control-allow-{methods,headers}` and `vary`
 
 ### Configurable array-element variety
 
-`array_length = "p90"` (v0.7.2) recovered a ~500-long array but anti-unification still capped the *distinct elements* at 8 and tiled them to length — list UIs showed 8 rows repeated ~62×.
+`array_length = "p90"` (v0.7.2) recovered a ~500-long array but anti-unification still capped the _distinct elements_ at 8 and tiled them to length — list UIs showed 8 rows repeated ~62×.
 
 ```toml
 [generate.anti_unification]
@@ -349,7 +372,7 @@ Default stays at `8` so existing twins are byte-unchanged. Catalog or search API
 
 ### Request-keyed response bucketing
 
-Some routes return different bodies depending on a *request* field — a parent id, a `useCase` scope, a search filter. Without help, synth collapses every input to one global representative, and every variation in the request returns the same canned response. The new request-keying machinery synthesizes one response per request-field bucket and routes the right one back.
+Some routes return different bodies depending on a _request_ field — a parent id, a `useCase` scope, a search filter. Without help, synth collapses every input to one global representative, and every variation in the request returns the same canned response. The new request-keying machinery synthesizes one response per request-field bucket and routes the right one back.
 
 ```toml
 [generate.request_keying]
@@ -385,7 +408,7 @@ A debounced search endpoint records a flood of empty no-match responses interlea
 Two new knobs, both under `[generate.anti_unification]`:
 
 - **`array_length`** — `"median"` (default), `"p75"`, `"p90"`, or `"max"`. Pick the length statistic that matches your corpus shape.
-- **`drop_empty_array_responses`** — `false` (default). When `true`, all-empty responses are excluded from anti-unification *per status group*, but only when at least one non-empty response exists for that group, so error variants and scalar responses are never dropped.
+- **`drop_empty_array_responses`** — `false` (default). When `true`, all-empty responses are excluded from anti-unification _per status group_, but only when at least one non-empty response exists for that group, so error variants and scalar responses are never dropped.
 
 `wraith synth` now prints the active policy in its fidelity warning and, on collapse-prone defaults, suggests the exact stanza to add.
 
@@ -436,7 +459,6 @@ The related nested-placeholder leak on List / Read routes is fixed in v0.8.2.
 
 - Lib tests: 2890 → 2953 (+63 across the release).
 - 11 generate-related bones closed across 4 review passes; zero open bugs at cut.
-
 
 ## v0.6.0 - 2026-05-11
 
@@ -664,7 +686,7 @@ See the [Simulation](/simulation/) guide for the fault/latency/rate-limit story 
 
 - **Router backtracking**: literal subtrees with wrong-method no longer block backtracking to param subtrees.
 - **Scrub null handling**: null JSON values no longer get tokenized.
-- **Header allowlist**: user `with_extra_compare_headers` opt-ins no longer overridden by blanket x-* filter.
+- **Header allowlist**: user `with_extra_compare_headers` opt-ins no longer overridden by blanket x-\* filter.
 - **Sync conformance replay**: query params now carried through.
 - **VCR base64 handling**: case-insensitive `base64` detection.
 - **Async CRUD handlers**: error-variant short-circuit restored across Update / Delete.
