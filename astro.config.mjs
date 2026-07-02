@@ -92,6 +92,7 @@ export default defineConfig({
             { label: 'Configuration', slug: 'configuration' },
             { label: 'Scrubbing & PII', slug: 'scrubbing' },
             { label: 'Safety: doctor & lint', slug: 'safety' },
+            { label: 'Twin Response Contract', slug: 'twin-response-contract' },
             { label: 'Changelog', slug: 'changelog' },
           ],
         },
