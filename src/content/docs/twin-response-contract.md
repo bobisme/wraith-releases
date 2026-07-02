@@ -1,11 +1,11 @@
 ---
 title: Twin Response Contract
-description: How a running wraith twin dispatches routes and entities, what X-Wraith-* headers every response carries, and how fidelity modes interact. Applies to wraith 0.18.0+.
+description: How a running wraith twin dispatches routes and entities, what X-Wraith-* headers every response carries, and how fidelity modes interact. Applies to wraith 0.18.3+.
 ---
 
 This page is the authoritative reference for how a running twin responds to requests. It covers route and entity dispatch, provenance headers, fidelity mode interactions, and the complete set of `X-Wraith-*` response headers an agent harness or test suite may observe.
 
-Applies to **wraith 0.18.0 and later**. See [Migration notes](#migration-notes) if you are upgrading from an older synthesized model.
+Applies to **wraith 0.18.3 and later**. See [Migration notes](#migration-notes) if you are upgrading from an older synthesized model.
 
 Cross-referenced from `wraith serve --help`.
 
@@ -19,8 +19,8 @@ The twin maintains a route trie built from the synthesized model. Every incoming
 
 | Situation | Status | Body | Provenance |
 |-----------|--------|------|------------|
-| Route **hit** — method + path matched a known template | varies | served response (see entity dispatch below) | `recorded`, `template`, `handler`, `fixture`, or `fault` |
-| Route **miss** — no template matched | 501 | structured miss body (see below) | `template` |
+| Route **hit** — method + path matched a known template | varies | served response (see entity dispatch below) | `recorded`, `template`, `handler`, `fixture`, `fault`, or `miss` |
+| Route **miss** — no template matched | 501 | structured miss body (see below) | `miss` |
 
 **Structured 501 body (route miss):**
 
@@ -52,21 +52,26 @@ After a route match, entity-bearing routes (path-parameterized GET/PUT/PATCH/DEL
 
 **Known-ID set** (per session):
 
-> IDs observed in recordings for that route's entity type  
+> IDs observed **with any non-4xx outcome** in recordings for that route's entity type  
 > ∪ entities in `state/fixtures/` for the route's entity type  
 > ∪ entities created through the twin's own state layer this session  
 > (respects `X-Wraith-Session`; client-supplied ids on create are included)
 
+**Known-MISSING set:** IDs whose *only* recorded outcome was a 4xx — direct recorded not-found evidence (e.g. a zero-uuid probe that received a 404). This is the disjoint complement of the known-ID set: an id that received a 2xx even once is "known", never "missing". In `not_found` mode the gate consults known-MISSING before the known set, so an id the twin holds recorded not-found evidence for fails closed instead of fabricating a 200. Both sets are consulted only in `not_found` mode; default `synthesize` mode reads neither.
+
 | Situation | `synthesize` mode (default) | `not_found` mode (`--unknown-entity not_found`) |
 |-----------|----------------------------|-------------------------------------------------|
 | Entity id **in known-ID set** | 200 — served from state / recording / template | same |
+| Entity id **in known-MISSING set** (recorded 4xx-only) | Synthesized 200, `provenance=template` (default mode is unchanged) | Fail-closed not-found, `provenance=miss` (see preference order below) |
 | Entity id **not in known-ID set**, route has **no** 4xx variant | Synthesized 200, `provenance=template` (template-clone with the requested id inserted) | Fail-closed not-found (see preference order below) |
-| Entity id **not in known-ID set**, route **has** a 4xx variant | 404/4xx — the recorded not-found variant | same |
+| Entity id **not in known-ID set**, route **has** a 4xx variant | Already 404/4xx via the `state_member` guard (the id is not a state member) | Same 4xx — the gate and the guard select the same variant |
+
+> **Exact-replay first.** In both modes the exact-body short-circuit runs before this gate, so a request for the *exact recorded URL* of a 4xx-only id replays that recorded 404 verbatim with `provenance=recorded`. The known-MISSING gate only engages when exact replay is defeated — e.g. an added query param, or a re-synthed model without raw bodies.
 
 **Fail-closed not-found preference order** (`not_found` mode):
 
-1. The route's recorded or synthesized 4xx variant — the provider's own not-found shape (status 404 preferred; any 4xx accepted). Provenance stays `template`.
-2. Else the structured 501 route-miss body (same shape as above) with status 501.
+1. The route's recorded or synthesized 4xx variant — the provider's own not-found shape (status 404 preferred; any 4xx accepted). Provenance is `miss`: a policy-produced coverage decision, not a verbatim recorded 404.
+2. Else the structured 501 route-miss body (same shape as above) with status 501, also `provenance=miss`.
 
 ---
 
@@ -80,15 +85,20 @@ Single per-response value. One of:
 
 | Value | Meaning |
 |-------|---------|
-| `recorded` | Verbatim recorded exchange — served by the exact-body short-circuit. |
-| `template` | Synthesized from the model (template constants + holes, session state, error envelopes). The default when no more-specific branch fired. |
+| `recorded` | Verbatim recorded exchange — served by the exact-body short-circuit or `exact_read_recording`. |
+| `template` | Synthesized from the WIR model (template constants + holes, session state, error envelopes). The default when no more-specific branch fired. |
 | `handler` | Produced by a Lua handler's successful return. |
 | `fixture` | Served from a seeded fixture entity (`state/fixtures/`), including a read that overlays fixture-entity fields onto a template. |
 | `fault` | A fault or rate-limit injection short-circuited normal serving before the body was rendered (fault Error/Throttle/Drop/Timeout and rate-limit 429). |
+| `miss` | A policy-produced fail-closed not-found: the twin had no coverage for this request and the `--unknown-entity not_found` gate (or a route-level miss) fired. The body was synthesized from the route's 4xx variant or the structured-501 route-miss envelope. Distinguishes "the twin is telling you it does not have this" from `recorded` (a verbatim provider 404 replay) and `template` (a synthesized content answer). |
+
+> The first five values (`recorded`/`template`/`handler`/`fixture`/`fault`) are shared with the per-field `X-Wraith-Provenance-Counts` header. `miss` is a per-response value only — the counts-header vocabulary is unchanged.
 
 ### `X-Wraith-Route`
 
-Matched route template in wraith `:param` form, e.g. `GET /v3/assets/:id`. Present on every application response where a route matched. Absent on route-miss 501 responses (no template matched).
+Matched route in `METHOD /path` form, e.g. `GET /v3/assets/:id`. Present on every application response where a route matched. Absent on route-miss 501 responses (no route matched).
+
+Under **synth** fidelity the path is the abstracted route template in wraith `:param` form. Under **strict**/**permissive** fidelity the path is the matched recording's concrete request path (e.g. `GET /v3/assets/42`), since strict replay indexes recorded exchanges by concrete `(method, path)` and has no template abstraction.
 
 ### `X-Wraith-Exchange`
 
@@ -132,9 +142,9 @@ With `--debug` and `--trace` combined, each trace entry also carries the full pe
 
 | Mode | Route miss | Entity miss (unknown id) | Provenance values seen |
 |------|-----------|--------------------------|------------------------|
-| `synth` (default) | 501 structured miss | synthesized 200 (`template`) or fail-closed 404/501 (`not_found` mode) | all five |
-| `strict` | 501 structured miss (no recordings match) | always fail-closed — strict mode never synthesizes, so an entity miss is inherently a not-found (recorded 4xx → synthesized 4xx → 501) | `recorded`, `fault` (no `template` for normal responses) |
-| `permissive` | behaves like `synth` today | same as synth | same as synth |
+| `synth` (default) | 501 structured miss (`miss`) | synthesized 200 (`template`) or fail-closed 404/501 (`miss`, `not_found` mode) | all six |
+| `strict` | 501 structured miss (`miss`, no recordings match) | always fail-closed — strict mode never synthesizes, so an entity miss is inherently a not-found (recorded 4xx → synthesized 4xx → 501) | `recorded`, `fault`, `miss` (no `template` for normal responses) |
+| `permissive` | legacy/unimplemented — behaves like `synth` today | same as synth | same as synth |
 
 :::note
 `ServeFidelityMode` values are `strict | synth | permissive`. There is no `fuzzy` mode — that name appears in stale documentation.
@@ -150,7 +160,7 @@ Every application response (all fidelity modes) may carry the following control 
 
 | Header | Default | Description |
 |--------|---------|-------------|
-| `X-Wraith-Provenance` | ON | Per-response provenance word: `recorded \| template \| handler \| fixture \| fault`. Suppressed by `--no-provenance-headers`. |
+| `X-Wraith-Provenance` | ON | Per-response provenance word: `recorded \| template \| handler \| fixture \| fault \| miss`. Suppressed by `--no-provenance-headers`. |
 | `X-Wraith-Route` | ON | Matched route template (`METHOD /path/:param`). Suppressed by `--no-provenance-headers`. |
 | `X-Wraith-Exchange` | conditional | `<session_id>/<index>` source identity; present only for `recorded` responses on models synthesized with 0.18.0+. Suppressed by `--no-provenance-headers`. |
 | `X-Wraith-Twin-Age` | always | Twin age in whole seconds at server startup (does not tick; divide by 86400 for days). Anchors on the newest recording session; model-only twins fall back to `synth_timestamp`. |
