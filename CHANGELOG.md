@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.18.2 — 2026-07-02
+
+**Fail-closed now works on the twins that need it most.** An external consumer re-validated 0.18.1 against a real recorded, read-only provider corpus and found both marquee features silently inert on that shape. Both are fixed and that corpus profile is now a permanent release gate. Fixes only, no new surfaces.
+
+### What changed for you
+
+- **Fail-closed engages on read-only corpora.** `--unknown-entity not_found` used to depend on CRUD evidence a read-only recorded corpus never has, so it silently did nothing on exactly the flagship shape. It now keys on path-parameterized routes plus the recorded known-id index, independent of CRUD classification. Re-run `wraith synth` for it to take effect.
+- **No more silent no-op on a safety flag.** If you request `not_found` and no route can honor it (e.g. a pre-0.18 model), `wraith serve` warns loudly at startup — stderr, `--ready-json` advice, and `/__wraith/info` — instead of quietly serving synthesized 200s.
+- **Recorded 404s with empty bodies replay.** Empty and non-JSON recorded responses were dropped from the exact-match replay index, so a recorded not-found could come back as a fabricated 200. They now replay verbatim in every mode. Re-synth required.
+- **`[REDACTED]` never reaches consumers.** Placeholders — baked into recordings at record time or introduced at serve time by the outbound scrub — are substituted with deterministic, shape-plausible values on every synthesized response path. Strict fidelity stays byte-faithful.
+- **A read-only recorded corpus is now a release gate.** The exact profile that found these bugs (recorded, read-only, scrubbed, zero CRUD evidence) is fresh-synthed, served, and asserted on every build.
+
+### Should I do anything?
+
+Re-run `wraith synth` on your twins — the fail-closed and empty-body-404 fixes both live in the re-synthesized model indexes. If you serve agent-facing twins, set `--unknown-entity not_found` and watch the startup output: any warning means your model needs the re-synth.
+
 ## v0.18.1 — 2026-07-02
 
 **The fail-closed guarantee now holds on nested routes.** A patch release hardening what v0.18.0 shipped: fixes only, no new surfaces.
