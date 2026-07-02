@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.18.1 — 2026-07-02
+
+**The fail-closed guarantee now holds on nested routes.** A patch release hardening what v0.18.0 shipped: fixes only, no new surfaces.
+
+### What changed for you
+
+- **Fail-closed holds on nested routes.** The known-id gate now keys on the full path-parameter tuple, not just the last segment — `/orgs/:org/repos/:repo` no longer treats a never-seen repo under a known org as known. This closes the multi-param limitation called out in the v0.18.0 notes. Re-run `wraith synth` for it to take effect (the tuple index is built at synth time).
+- **Parameterized-list misses fail closed too.** Entity misses on parameterized list routes now honor `--unknown-entity not_found` instead of falling through to a synthesized 200.
+- **Outbound scrub preserves echoes.** Query-parameter, form-field, and text-response echoes round-trip verbatim instead of coming back tokenized, matching the existing JSON-body echo behavior.
+- **`X-Wraith-Route` under strict fidelity** now reports the concrete `METHOD /path` of the matched recording (synth mode keeps the `:param` template form).
+- **DELETE provenance accuracy.** DELETE responses no longer report a phantom field in the per-field origin map, and deleting a fixture-seeded entity reports provenance `fixture`.
+- **Freshness session-id parsing hardened.**
+- **New reference page:** the [Twin Response Contract](/twin-response-contract/) — the authoritative hits-and-misses table, every `X-Wraith-*` header, and fidelity-mode interactions.
+
+### Should I do anything?
+
+Re-run `wraith synth` on twins you serve with `--unknown-entity not_found` — the stronger tuple-keyed index only exists in models synthesized on 0.18.1+. Everything else applies immediately.
+
 ## v0.18.0 — 2026-07-01
 
 **A twin can no longer invent an entity without telling you — and you can make it refuse outright.** Until now, a twin under default fidelity would answer a request for an entity that never existed with a confident, fully-shaped 200, indistinguishable from recorded truth. A human notices eventually; an agent builds on the fabrication and ships. This release stamps every response with where it came from, and adds an opt-in mode where unknown entities fail closed instead of being synthesized. Additive — existing twins behave identically unless you opt in.
