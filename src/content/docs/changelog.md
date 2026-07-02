@@ -3,6 +3,20 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.18.3 — 2026-07-02
+
+**The twin no longer contradicts its own recorded not-found evidence.** Closes the last residual from the external re-validation: fixes only, one small additive header-contract change.
+
+### What changed for you
+
+- **Fail-closed honors recorded 404s.** In `--unknown-entity not_found` mode, an id whose only recorded outcome was a 4xx used to count as "known" and get a synthesized 200 — a fabricated success exactly where the twin held direct not-found evidence. Those ids now live in a known-missing index built at synth time, and the gate serves the provider's own 404 shape for them. Cross-route aware (an id with a 2xx anywhere is never flagged missing); exact recorded URLs still replay the verbatim recorded 404 first. Default mode unchanged. Re-synth required.
+- **New `X-Wraith-Provenance: miss` value.** Policy-produced not-founds — fail-closed entity misses and route-level 501s — now carry `miss` instead of `template`, so a harness can tell apart: `recorded` (the provider really said 404), `miss` (the twin has no coverage and told you so), and `template` (a synthesized answer). **Contract note:** if your harness matches on `template` to detect fail-closed misses, update it to `miss`. The [Twin Response Contract](/twin-response-contract/) page is updated.
+- **Release gate extended.** The read-only fixture now permanently asserts the known-missing case, including the query-varied request that previously fabricated a 200.
+
+### Should I do anything?
+
+Re-run `wraith synth` (the known-missing index is built at synth time), and switch any `template`-based fail-closed-miss detection to `miss`.
+
 ## v0.18.2 — 2026-07-02
 
 **Fail-closed now works on the twins that need it most.** An external consumer re-validated 0.18.1 against a real recorded, read-only provider corpus and found both marquee features silently inert on that shape. Both are fixed and that corpus profile is now a permanent release gate. Fixes only, no new surfaces.
@@ -69,6 +83,7 @@ Re-run `wraith synth` on existing twins when you want the new features at full f
   ```
 
   Not ready to fail builds on this? Set `[handlers] deviation_policy = "warn"` to report without failing. See the [Lua handlers guide](/lua/) for details.
+
 - **Every served field has provenance.** Fields are classified `recorded | synthesized | echoed | authored | fixture`. `wraith check` reports per-route counts and an overall **fiction ratio** — how much of your twin is authored fiction vs recorded evidence — so a reviewer can judge how much to trust a twin at a glance. `wraith serve --debug` adds an `X-Wraith-Provenance` summary header; with `--trace --debug` the trace endpoints carry full per-field origin maps.
 - **Staleness is loud, and can be a gate.** `wraith serve` now tells you how old a twin is — a startup banner, `X-Wraith-Twin-Age` / `X-Wraith-Recorded-At` headers on every response, and the same fields in `--ready-json` and `/__wraith/info`. To _enforce_ freshness, add an SLA to `wraith.toml`:
 
@@ -79,6 +94,7 @@ Re-run `wraith synth` on existing twins when you want the new features at full f
   ```
 
   `wraith check` fails with `twin-stale` advice when violated and `wraith doctor` reports the same verdict — point your nightly CI at it and a rotting twin can't pass silently. See [Conformance & drift](/conformance/).
+
 - **Twin a service from synthetic traffic: `wraith explore --record`.** Scenario runs generated from an OpenAPI spec are now captured as normal scrubbed recording sessions (tagged `synthetic`), ready for `wraith synth`. For services where you can't record real traffic for data-safety reasons, this sidesteps the problem entirely — no real data ever touches the twin. See [OpenAPI seed mode](/openapi/).
 - **Session cookies are scrubbed by default.** `set-cookie` header values (session tokens, CSRF tokens) — previously the most common way a live credential survived into a recording — are now tokenized on write, with cookie names and attributes preserved. Conformance is unaffected.
 - **Packs carry an auditable scrub report.** `wraith pack` embeds a human-readable report of what was scrubbed (per-rule match counts, affected fields and routes, the PII-scan verdict, the scrub-policy hash), covered by the pack's signature. Render it with `wraith inspect <pack> --scrub-report` — a security reviewer can now assess a twin's data-safety without unpacking it.
