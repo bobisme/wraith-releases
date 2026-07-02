@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.18.3 — 2026-07-02
+
+**The twin no longer contradicts its own recorded not-found evidence.** Closes the last residual from the external re-validation: fixes only, one small additive header-contract change.
+
+### What changed for you
+
+- **Fail-closed honors recorded 404s.** In `--unknown-entity not_found` mode, an id whose only recorded outcome was a 4xx used to count as "known" and get a synthesized 200 — a fabricated success exactly where the twin held direct not-found evidence. Those ids now live in a known-missing index built at synth time, and the gate serves the provider's own 404 shape for them. Cross-route aware (an id with a 2xx anywhere is never flagged missing); exact recorded URLs still replay the verbatim recorded 404 first. Default mode unchanged. Re-synth required.
+- **New `X-Wraith-Provenance: miss` value.** Policy-produced not-founds — fail-closed entity misses and route-level 501s — now carry `miss` instead of `template`, so a harness can tell apart: `recorded` (the provider really said 404), `miss` (the twin has no coverage and told you so), and `template` (a synthesized answer). **Contract note:** if your harness matches on `template` to detect fail-closed misses, update it to `miss`. The [Twin Response Contract](/twin-response-contract/) page is updated.
+- **Release gate extended.** The read-only fixture now permanently asserts the known-missing case, including the query-varied request that previously fabricated a 200.
+
+### Should I do anything?
+
+Re-run `wraith synth` (the known-missing index is built at synth time), and switch any `template`-based fail-closed-miss detection to `miss`.
+
 ## v0.18.2 — 2026-07-02
 
 **Fail-closed now works on the twins that need it most.** An external consumer re-validated 0.18.1 against a real recorded, read-only provider corpus and found both marquee features silently inert on that shape. Both are fixed and that corpus profile is now a permanent release gate. Fixes only, no new surfaces.
