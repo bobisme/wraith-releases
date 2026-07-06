@@ -9,6 +9,10 @@ Applies to **wraith 0.18.3 and later**. See [Migration notes](#migration-notes) 
 
 Cross-referenced from `wraith serve --help`.
 
+For a practical harness setup that combines these headers with session
+isolation, fixtures, deterministic clocks, and per-session reset, see
+[Sandboxing agents with Wraith](/sandboxing-agents/).
+
 ---
 
 ## Hits and Misses

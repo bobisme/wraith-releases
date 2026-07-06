@@ -21,6 +21,9 @@ description: "Package a consumer's API expectations as a signed .wic contract th
 
 An **intent contract** is a consumer team's executable statement of what they depend on from a provider's API, packaged as a signed `.wic` archive. It pins the base (and any overlay) twin by digest, carries runnable [sigil](/lua/) Lua scenarios plus the canonical `lib/wraith.lua` helper, and is verified against a freshly composed twin — so a provider can see, in CI, exactly which downstream expectations a change would break, before shipping it.
 
+The same runtime session machinery can be used without `.wic` contracts. For
+custom harnesses, see [Sandboxing agents with Wraith](/sandboxing-agents/).
+
 Intent contracts shipped in v0.10.0. They are **purely additive**: every v0.9.x pack, composite, and `wraith.toml` re-verifies and re-serves unchanged, and root and overlay twins are untouched. The entire surface is the `wraith contract` command group.
 
 ## When to use a contract

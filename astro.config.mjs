@@ -78,6 +78,7 @@ export default defineConfig({
             { label: 'Streaming', slug: 'streaming' },
             { label: 'GraphQL', slug: 'graphql' },
             { label: 'Simulation', slug: 'simulation' },
+            { label: 'Sandboxing agents', slug: 'sandboxing-agents' },
             { label: 'OpenAPI seed mode', slug: 'openapi' },
             { label: 'Conformance & drift', slug: 'conformance' },
             { label: 'Generate (LLM repair)', slug: 'generate' },

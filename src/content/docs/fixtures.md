@@ -5,6 +5,9 @@ description: "Seed a Wraith twin's CRUD state from disk: the directory-form fixt
 
 Fixtures seed a twin's stateful CRUD store with starting data so a freshly served twin already has customers, orders, or whatever entities your tests expect to exist. They live under `state/fixtures/` in the twin workspace and are loaded per session, not globally.
 
+For parallel agent runs that select fixtures per session at runtime, see
+[Sandboxing agents with Wraith](/sandboxing-agents/).
+
 A fixture only loads if its entity type is declared in `state/schema.json`. The two halves are coupled: the schema names the entity types and their primary keys; the fixtures supply the records. Records for an undeclared entity type are silently skipped.
 
 ## Where fixtures live
