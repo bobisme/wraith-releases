@@ -3,6 +3,69 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## Unreleased
+
+**Twins can now be published, discovered, and cryptographically verified across a team — not just recorded and served locally.** The largest addition since v0.18.3: a full path for pushing a twin to any OCI-compatible registry (GHCR, Google Artifact Registry, Zot, and others), pinning and pulling it like any other dependency, and proving where it came from and who signed off on it. All of it is opt-in — a twin that only ever lives on your laptop keeps working exactly as before.
+
+### Publish and distribute twins
+
+- **`wraith publish`** packs a twin reproducibly (byte-identical output for identical inputs), pushes it to your configured registry, and moves the channel tag (e.g. `stable`) to the new digest — plus an immutable `<service>.<date>.<digest>` build tag so older builds stay addressable. `wraith push` is the lower-level pack-to-registry primitive if you want to drive tagging policy yourself.
+- **`wraith pull` and `wraith install`** fetch a digest-pinned twin or overlay artifact from a registry into a local cache and extract it into a workspace, the same shape as installing a local `.wraith` archive — plus a re-scrub pass over the extracted model as defense in depth.
+- **`wraith serve` and `wraith run` now accept OCI references directly.** Point either one at `registry/repo@sha256:...` instead of a local twin directory and it pulls, caches, and serves it; re-running against the same digest reuses the already-materialized workspace instead of re-extracting.
+- **Dependency pinning: `wraith resolve`, `wraith pin`, `wraith deps`, and a new `wraith.lock` file.** Resolve a mutable channel tag to an immutable digest, pin it into the lock file, and use `wraith deps update` / `wraith deps verify` to move pins forward or gate CI on "everything's pinned, every digest exists, the local cache matches." `wraith up --ci` resolves OCI-referenced twins through the lock file and refuses to start on an unpinned, tag-only reference.
+- **`wraith oci init`** is the guided setup for all of the above: it probes your registry's capabilities, writes a safe `[oci]` section into `wraith-project.toml`, and flags anything the registry doesn't support before you try to publish against it.
+
+### Trust: sign, attach, and verify
+
+- **`wraith key gen`** generates the Ed25519 signing keypair the rest of this workflow runs on.
+- **`wraith attach`** adds trust evidence to a published twin as OCI referrers: a signed provenance attestation, a conformance report, a scrub-audit summary, or a publication event — so a consumer can inspect what's actually known about an artifact instead of taking the registry's word for it.
+- **`wraith verify`** checks a local `.wraith` package or a digest-pinned OCI reference: signature, digest integrity, an attached attestation, a cached pack, and — with `--service` plus a pinned root key — a provider's full signed trust chain (authorization policy, service pointer, checkpoint). PII findings inside a package can be escalated from a warning to a hard failure with `--strict`.
+- **`wraith oci verify-pointer`** fetches and verifies a provider's signed service pointer against a root key you've pinned out-of-band, so you always know which digest a channel currently blesses and can catch a rolled-back or compromised pointer.
+- Optional **cosign interoperability** lets `wraith verify` check signatures produced by cosign alongside wraith's own, if that's already part of your supply chain.
+
+### Discover twins without standing up a service
+
+- **`wraith search`** and **`wraith stale`** query a signed catalog artifact stored right in the registry — no separate index service required. Search by service, repo, or owner, or by route (`wraith search route 'GET /v3/assets'`); filter by trust rung, freshness, channel, or team. `wraith catalog update` (cron-friendly) rebuilds that signed catalog from a repo scan.
+- **`wraith lineage`** and **`wraith dependents`** walk the ancestry/fan-out graph between a base twin and the overlays built on it — "what did this come from" and "what depends on this," both digest-pinned.
+- **`wraith can-i-publish`** checks whether a candidate build is clear to publish under your gating policy (blocking or advisory) against a hosted index when one is configured, falling back gracefully to the offline signed catalog when it isn't.
+
+### A signed audit trail for consumer intent contracts
+
+- **`wraith contract propose`** now emits a signed proposal event, and the provider-side lifecycle verbs (`accept`, `reject`, `promote`, `demote`, `quarantine`, `retire`, `set-status`) each emit a provider-signed event of their own. The full propose → accept/reject → promote/retire history of a consumer contract is now a verifiable, append-only chain attached to the twin, not just local state on someone's disk.
+
+### Runtime and sessions
+
+- **Pre-provision an isolated agent session.** `POST /__wraith/session` sets up a session — fixture set, seed, clock — before your test traffic starts, instead of only provisioning lazily on first request. The readiness JSON reports whether a running twin supports this; if not, you get a clear 501 instead of a silently ignored request.
+- **List, reset, and tear down sessions individually.** `GET /__wraith/session`, `POST /__wraith/session/{id}/reset`, and `DELETE /__wraith/session/{id}` manage one agent's session namespace without restarting the twin or disturbing anyone else's. `/__wraith/reset` is now explicitly documented as resetting every session at once.
+- **Deterministic clocks for serve.** `wraith serve --clock`, `--clock-epoch`, and `--seed` control the clock that synthesized and exact-recorded `Date` headers use in deterministic or fixed modes.
+- **Debug session-state dumps** — `GET /__wraith/session/{id}/state` — expose an existing session's state for inspection without creating it if it's missing.
+- **Trace reads scoped to a session.** `GET /__wraith/trace/log?session=<id>&last=<n>` filters by session before applying the tail limit, so parallel agent harnesses each see only their own recent activity.
+- **`wraith up` forwards session settings to every child.** Fixture, clock, clock-epoch, and control-token settings in your project manifest now reach each `wraith serve` child it starts, and `[startup] reset_on_start = true` resets every twin to a known baseline right after it comes up.
+- **Freshness banners are more informative**, reporting drift findings even when some age data is unavailable.
+- See the [agent sandboxing guide](/sandboxing-agents/) for the full per-agent session pattern.
+
+### Conformance and provenance
+
+- **The authored-output gate covers more response paths** — Lua-handler and fixture-sourced responses are now checked in both in-memory and wire-mode conformance runs. Declared deviations only exempt scoring when they actually match, and nested-array evidence is reported more precisely.
+- **More accurate provenance accounting** in check reports: authored-only routes are called out separately, rendered response leaves are counted after array expansion, cached provenance survives idempotency replay, and generated list-envelope metadata is marked computed instead of recorded.
+- **`wraith doctor` now reports a provenance/deviation summary** — an advisory block built from your latest check report, declared deviations, and unbound handler stems. Informational only; it doesn't change doctor's exit code.
+- **Fixture and Lua vocabulary linting.** `wraith lint` flags fixture fields that differ from the synthesized model only in case (error), unknown fixture fields (warning), and near-miss casing in Lua handler string literals (warning).
+
+### Scrubbing and PII detection
+
+- **Credential-shaped response values are tokenized more consistently** — including nested and list responses, and JWT-shaped strings — across both capture-time and outbound scrubbing. Short, obviously-structural fixture values are left alone.
+- **JSON-aware PII scanning.** `wraith pack` and `wraith doctor` now inspect JSON structure, not just raw text, for credential keys, JWTs, vendor token prefixes, and avatar-hash identifiers, with per-variant evidence. Accept a specific finding with a reasoned `[[pii.allow]]` rule.
+- **Scrub-report wording is more honest.** `wraith inspect <archive>.wraith --scrub-report` reports `signature_status` as `ok` / `invalid` / `unverifiable` / `unsigned` instead of a boolean that overclaimed "signed."
+- **Set-Cookie scrubbing hardened** for legacy comma-folded values — every cookie value is scrubbed while `Expires` commas are preserved — and generated `scrub.toml` files no longer duplicate built-in rules.
+
+### Recording and exploration
+
+- **`wraith explore --record` cleanup.** Recording sessions now validate headers up front, remove empty zero-exchange sessions instead of finalizing them as real recordings, warn on lossy non-UTF-8 header capture, and share tag parsing with `wraith record`.
+
+### Should I do anything?
+
+No migration needed — everything above is additive and opt-in, and a twin that never touches a registry behaves exactly as before. To try publishing: `wraith oci init` against your registry, `wraith key gen`, then `wraith publish <twin>`. To consume a twin someone else publishes: `wraith search`, or `wraith pull` / `wraith verify` against the digest they hand you.
+
 ## v0.18.3 — 2026-07-02
 
 **The twin no longer contradicts its own recorded not-found evidence.** Closes the last residual from the external re-validation: fixes only, one small additive header-contract change.
