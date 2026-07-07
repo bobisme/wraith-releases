@@ -39,7 +39,7 @@
 - **Trace reads scoped to a session.** `GET /__wraith/trace/log?session=<id>&last=<n>` filters by session before applying the tail limit, so parallel agent harnesses each see only their own recent activity.
 - **`wraith up` forwards session settings to every child.** Fixture, clock, clock-epoch, and control-token settings in your project manifest now reach each `wraith serve` child it starts, and `[startup] reset_on_start = true` resets every twin to a known baseline right after it comes up.
 - **Freshness banners are more informative**, reporting drift findings even when some age data is unavailable.
-- See the [agent sandboxing guide](/sandboxing-agents/) for the full per-agent session pattern.
+- See the agent sandboxing guide for the full per-agent session pattern.
 
 ### Conformance and provenance
 
