@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.19.0 — 2026-07-07
 
-**Twins can now be published, discovered, and cryptographically verified across a team — not just recorded and served locally.** The largest addition since v0.18.3: a full path for pushing a twin to any OCI-compatible registry (GHCR, Google Artifact Registry, Zot, and others), pinning and pulling it like any other dependency, and proving where it came from and who signed off on it. All of it is opt-in — a twin that only ever lives on your laptop keeps working exactly as before.
+**Twins can now be published, discovered, and cryptographically verified across a team — not just recorded and served locally.** The largest release since the runtime itself: a full path for pushing a twin to any OCI-compatible registry (GHCR, Google Artifact Registry, Zot, and others), pinning and pulling it like any other dependency, and proving where it came from and who signed off on it. All of it is opt-in — a twin that only ever lives on your laptop keeps working exactly as before.
 
 ### Publish and distribute twins
 
