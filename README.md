@@ -4,6 +4,8 @@
 
 Record any API. Run a verified local twin. Develop against it — fast, correct, local.
 
+Start with a sigil contract when you only need to assert that a live provider flow still works. Use Wraith when that expectation needs recordings, offline replay, a verified local twin, deterministic agent sandboxes, or provider CI evidence.
+
 ```
 wraith init stripe --base-url https://api.stripe.com
 wraith record stripe --port 8080

@@ -1,6 +1,6 @@
 ---
-title: Wraith intent contracts — consumer-driven API twin verification
-description: "Package a consumer's API expectations as a signed .wic contract that pins the twin by digest and carries runnable scenarios, then verify it against a freshly composed twin in CI. Covers packing, the provider trust gate, the lifecycle and status model, and CI gating."
+title: Wraith intent contracts — consumer-driven API verification
+description: "Package API expectations as signed .wic contracts, run them against a provider candidate or Wraith twin, and promote them into provider CI when they need to gate releases. Covers packing, the provider trust gate, the lifecycle and status model, and CI gating."
 ---
 
 <script type="application/ld+json">
@@ -19,12 +19,22 @@ description: "Package a consumer's API expectations as a signed .wic contract th
 }
 </script>
 
-An **intent contract** is a consumer team's executable statement of what they depend on from a provider's API, packaged as a signed `.wic` archive. It pins the base (and any overlay) twin by digest, carries runnable [sigil](/lua/) Lua scenarios plus the canonical `lib/wraith.lua` helper, and is verified against a freshly composed twin — so a provider can see, in CI, exactly which downstream expectations a change would break, before shipping it.
+An **intent contract** is a consumer team's executable statement of what they depend on from a provider's API. The cheapest form is a [sigil](/lua/) Lua scenario run against a provider candidate. Wraith adds the signed `.wic` package, the canonical `lib/wraith.lua` helper, digest-pinned twins, and verification against a freshly composed twin — so a provider can see, in CI, exactly which downstream expectations a change would break, before shipping it.
 
 The same runtime session machinery can be used without `.wic` contracts. For
 custom harnesses, see [Sandboxing agents with Wraith](/sandboxing-agents/).
 
 Intent contracts shipped in v0.10.0. They are **purely additive**: every v0.9.x pack, composite, and `wraith.toml` re-verifies and re-serves unchanged, and root and overlay twins are untouched. The entire surface is the `wraith contract` command group.
+
+## Contract first, twin when needed
+
+Use the smallest rung that proves the risk:
+
+- **Plain sigil scenario:** start here when a consumer only needs to check that a live provider candidate still returns a required shape, field, status, or value relation.
+- **Signed `.wic` contract:** use this when that expectation needs an owner, signature, review trail, and provider-controlled lifecycle state.
+- **Wraith twin:** add recordings and a twin when you need offline replay, deterministic agent sandboxes, controllable state or faults, conformance scoring, or provider CI that does not call the live upstream.
+
+A failing contract can be enough by itself. Recording a Wraith twin is the next step when the failure needs to be reproduced locally, shared safely, or turned into a repeatable release gate.
 
 ## When to use a contract
 
