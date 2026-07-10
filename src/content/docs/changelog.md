@@ -3,6 +3,32 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.20.0 — 2026-07-10
+
+**Twins now keep themselves honest: `wraith worker run` turns any machine with registry access into a drift-checking, rebase-validating worker for a wraith-index control plane.** The worker claims jobs from an index, executes them inside your boundary — next to the registry, where the credentials live — and pushes back signed result summaries. The index coordinates everything while holding zero registry credentials and never receiving payload bytes. Everything here is opt-in: without a `worker.toml`, nothing changes.
+
+### The worker client
+
+- **`wraith worker run`** polls a wraith-index for jobs, executes them, signs the results with your Ed25519 key, and pushes them back before marking each job complete. Leases are fenced and heartbeated — every job in a claimed batch is kept alive from the moment it's claimed, so one slow job can't cost the rest of the batch their leases. `--once` runs a single claim cycle for cron or CI.
+- **Three job kinds.** *Scan* a registry source and report which twins and tags exist; *drift-check* a pinned twin by replaying its recordings against the live upstream API and scoring conformance; *rebase-check* an overlay against a newly published base to catch silent forks.
+- **Drift verdicts use the real conformance bar.** A drift-check passes or fails on the same exchange-weighted score `wraith check` uses — a handful of cosmetic field drifts won't fail a twin that's still faithful where it matters, and raw divergence counts still come along for trending.
+
+### Operator-signed worker policy
+
+- **`wraith worker policy publish` and `show`.** An operator signs a policy document saying what workers may do — which job kinds, which repos, which services — and publishes it to the registry. Workers verify it against a pinned operator key at startup and before every claim cycle.
+- **Fail-closed by design.** If the policy is missing, forged, expired, or rolled back to an older version, a policy-configured worker refuses to claim anything and says so loudly. The signed policy can only narrow what a worker's local configuration allows, never widen it.
+
+### Security hardening
+
+- **Credential boundaries fail closed.** A job that names a credential source the worker doesn't have — or one bound to a different registry — is refused outright instead of silently falling back to ambient credentials. Job inputs must be digest-pinned; mutable tag references are rejected.
+- A round of post-release bug-hunting passes tightened the worker path throughout: strict trust-state loading, stricter policy parsing (a misspelled grant is an error, not silently ignored), and more.
+
+### Docs
+
+- **New worker operations guide** (`docs/worker-operations.md` in the repo): a `worker.toml` walkthrough and a calibration recipe — how to run a self-replay drift check that passes by construction, so you can validate a new worker deployment before pointing it at a real upstream.
+
+**Should I do anything?** Only if you want the worker: mint a worker token on your wraith-index, write a `worker.toml`, and run `wraith worker run`. If you don't run an index, nothing in this release affects you — upgrade freely.
+
 ## v0.19.0 — 2026-07-07
 
 **Twins can now be published, discovered, and cryptographically verified across a team — not just recorded and served locally.** The largest release since the runtime itself: a full path for pushing a twin to any OCI-compatible registry (GHCR, Google Artifact Registry, Zot, and others), pinning and pulling it like any other dependency, and proving where it came from and who signed off on it. All of it is opt-in — a twin that only ever lives on your laptop keeps working exactly as before.
