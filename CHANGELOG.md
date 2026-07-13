@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.20.1 — 2026-07-13
+
+**Worker jobs now complete correctly against the hosted index.** This patch fixes the result-summary compatibility break in v0.20.0, removes a duplicate completion request, and hardens the boundary so client and server wire shapes cannot drift unnoticed again.
+
+- **Scan, drift-check, and rebase-check results include their lease identity.** Signed summaries now carry the job ID, fence, and generation required by the index. Fresh jobs of all three kinds complete on their first attempt.
+- **Workers complete each job once.** Result ingestion already completes a job atomically; the worker no longer follows it with a second completion call that could report a stale-state error after successful work.
+- **Client/server compatibility is now checked byte-for-byte.** Release checks cover the full signed payload and the exact canonical bytes used for signature verification across all three result types.
+- **Security hardening from the July audit is included.** API-key headers and form-encoded PII are scrubbed more thoroughly; inline LLM credentials cannot be packed; upstream redirects and OCI token realms have stronger SSRF controls; LLM repair output is constrained; control tokens can rotate and expire; and live Twilio phone output is masked.
+
+**Should I do anything?** Upgrade any v0.20.0 worker to v0.20.1 before relying on scan, drift-check, or rebase-check jobs. No config migration is required. If you do not run a worker, upgrade for the security fixes.
+
 ## v0.20.0 — 2026-07-10
 
 **Twins now keep themselves honest: `wraith worker run` turns any machine with registry access into a drift-checking, rebase-validating worker for a wraith-index control plane.** The worker claims jobs from an index, executes them inside your boundary — next to the registry, where the credentials live — and pushes back signed result summaries. The index coordinates everything while holding zero registry credentials and never receiving payload bytes. Everything here is opt-in: without a `worker.toml`, nothing changes.
