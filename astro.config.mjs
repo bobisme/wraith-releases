@@ -91,6 +91,7 @@ export default defineConfig({
           label: 'Reference',
           items: [
             { label: 'Configuration', slug: 'configuration' },
+            { label: 'Session isolation', slug: 'sessions' },
             { label: 'Scrubbing & PII', slug: 'scrubbing' },
             { label: 'Safety: doctor & lint', slug: 'safety' },
             { label: 'Twin Response Contract', slug: 'twin-response-contract' },

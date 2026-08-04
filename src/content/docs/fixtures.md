@@ -121,7 +121,7 @@ wraith serve composite --fixture checkout-happy-path
 
 `--fixture <NAME>` seeds every newly created session namespace from `state/fixtures/<NAME>/` instead of `default`. It accepts a namespaced form `<overlay-ns>:<NAME>` and resolves an exact namespaced set before falling back to the bare name. An unknown fixture name exits `1` and lists the available set names.
 
-Fixtures are seeded **per session**: the first request carrying a given `X-Wraith-Session` header value creates a namespace and seeds it once. Subsequent requests on that session reuse the already-seeded state. Requests without the header share a single default namespace.
+Fixtures are seeded **per session**: the first request carrying a given `X-Wraith-Session` header value creates a namespace and seeds it once. Subsequent requests on that session reuse the already-seeded state. Requests without the header share a single default namespace. See [Session isolation](/sessions/) for the full namespace lifecycle.
 
 ## The `state/schema.json` contract
 

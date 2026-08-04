@@ -7,6 +7,10 @@ Agent runs need an API world that is local, repeatable, isolated, and honest
 about missing coverage. Wraith gives you that with one served twin process and
 one session namespace per agent.
 
+For the underlying contract — exactly what a session scopes, how namespaces are
+capped, and what each reset endpoint clears — see
+[Session isolation](/sessions/).
+
 The supported pattern is:
 
 - start the twin with deterministic serve settings and a ready JSON file;
