@@ -3,6 +3,37 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.21.0 — 2026-08-06
+
+**Twins stop giving you empty answers and merged routes.** This release is mostly about a twin telling you the truth about what it recorded. Several long-standing defects had the same shape: the twin held a perfectly good recording and served something emptier or vaguer instead — an empty list, a merged route, a `404` on an endpoint that exists. Conformance scored all of it as passing, because it wasn't asking.
+
+### Routes keep their names
+
+- **Endpoints with verbs in the path no longer collapse into one route.** A path segment carrying a hyphen, digit, or capital was treated as an identifier, so sibling endpoints like `/assets/actions/search-v1`, `/vector-search` and `/get-association-graph` merged into a single route — and the twin then answered `404 {"error":"actions/search-v1 not found"}`, reading the action name as an entity id. A segment is now only treated as an identifier when the recordings show the value actually flowing through the API as data. Thanks to the user who reported this with a complete reproduction bundle.
+- **API version prefixes are never treated as identifiers.** `/v1/` used to survive only because it is two characters long, which is why `/v10/` did not: any API that reached version 10 could silently start merging unrelated routes. Version prefixes are now recognized as such.
+- **gRPC services keep one route per RPC.** A service whose method names looked alike could collapse into a single route whose response was a blend of every RPC's shape.
+- **Names you invent are still parameterized.** Filenames and create-time slugs — values the API never hands back before you use them — are recognized by other evidence, so those routes still generalize.
+
+### Twins answer with what they recorded
+
+- **A URL with a recording no longer answers `[]`.** Two separate faults: recordings were filed against a route the router never reaches, and a collection that shrank while being recorded was flattened to its emptiest moment. Both are fixed, and a collection that changed over time now replays in order.
+- **gRPC search and query calls return their results.** These are HTTP POSTs that are semantically reads, so they missed the recorded-response index entirely and served empty result arrays.
+- **One create no longer discards a list route's recorded collection.** Creating a single entity could replace a 33-item recorded list with a 1-item one — or with `[]` if your query filtered the new entity out. Your session's own writes are still merged into the recorded collection.
+- **Nested collection routes are treated as lists, not single-entity reads.** `/repos/:owner/:repo/issues`, `/orgs/:org/repos` and 19 other routes across the reference corpus were misclassified.
+- **Echoed request fields that are sometimes absent no longer render as `null`.**
+
+### Conformance asks more
+
+- **List responses are now checked.** A result-set array was skipped entirely, so a twin could answer `{"messages": []}` for a route whose every recording carried 20 messages and still score 100%. The array must now still be an array, must be non-empty when every recording was populated, and its elements must carry the recorded keys and types.
+
+### Recording and config
+
+- **`wraith record --mode forward|mitm` works.** The forward proxy with TLS interception shipped in v0.3.0 but the CLI rejected it as "not yet implemented" — which was never true, and was hiding a startup crash that is now fixed.
+- **`[pii] default_action` is enforced, all three values.** It had been parsed and ignored since v0.6.0 while the docs said it shipped; every capture tokenized regardless of the setting. `tokenize` is unchanged; `reject` and the other value now do what they say.
+- **25 config keys that did nothing have been removed.** Each was documented and read by no code — setting one changed nothing, silently. Three whole sections are gone: `[generate.route_normalization]`, `[generate.type_inference]` and `[refresh]`.
+
+**Should I do anything?** Re-run `wraith synth` on your twins to pick up the routing fixes — several twins will end up with different (usually fewer, more general) routes, and twins with verb-in-path or v10+ endpoints will change the most. Existing configs still load: removed keys now produce a warning per key telling you what to use instead, so you can clean them up at your own pace. If you set `[pii] default_action` to anything other than `tokenize`, check that the now-enforced behavior is what you intended before your next capture.
+
 ## v0.20.1 — 2026-07-13
 
 **Worker jobs now complete correctly against the hosted index.** This patch fixes the result-summary compatibility break in v0.20.0, removes a duplicate completion request, and hardens the boundary so client and server wire shapes cannot drift unnoticed again.

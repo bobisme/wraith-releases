@@ -118,7 +118,6 @@ ttl_seconds = 86400
 
 | Field                | Type | Default | Description                         |
 |----------------------|------|---------|-------------------------------------|
-| `status_exact_match` | bool | `true`  | Require exact HTTP status match     |
 | `body_structure`     | f64  | `0.90`  | Min structural similarity [0, 1]    |
 | `body_values`        | f64  | `0.85`  | Min value similarity [0, 1]         |
 | `symbol_consistency` | f64  | `1.0`   | Required symbol/token consistency   |
@@ -186,25 +185,19 @@ Suppressed divergences are excluded from scoring but listed by `--show-suppresse
 | `max_iterations`       | u32  | `10`      | Max agent optimisation iterations     |
 | `token_budget`         | u64  | `200000`  | LLM token budget per generation run   |
 | `time_budget_minutes`  | u32  | `30`      | Time limit for generation run         |
-| `regression_tolerance` | f64  | `0.0`     | Acceptable conformance regression     |
 
 ### `[generate.symbolization]`
 
 | Field                      | Type | Default | Description                             |
 |----------------------------|------|---------|-----------------------------------------|
 | `entropy_threshold`        | f64  | `4.5`   | Shannon entropy cutoff for symbol detection |
-| `min_string_length`        | u32  | `4`     | Ignore strings shorter than this        |
-| `exclude_urls`             | bool | `true`  | Don't symbolise URL-like values         |
-| `exclude_natural_language` | bool | `true`  | Don't symbolise natural language        |
 | `field_name_hinting`       | bool | `true`  | Use field names to guide symbolisation  |
 
 ### `[generate.anti_unification]`
 
 | Field                        | Type             | Default    | Description                             |
 |------------------------------|------------------|------------|-----------------------------------------|
-| `min_exchanges_per_route`    | u32              | `3`        | Min exchanges before pattern extraction |
 | `low_confidence_threshold`   | f64              | `0.20`     | Below this, route is flagged low-conf   |
-| `array_mode`                 | string           | `"schema"` | `schema` or `element`                   |
 | `array_length`               | string           | `"median"` | Length policy for variable-length arrays. `median` (default; back-compatible) collapses bimodal corpora — use `p75`, `p90`, or `max` for catalog / search APIs. |
 | `drop_empty_array_responses` | bool             | `false`    | When `true`, responses whose every array is empty are excluded from anti-unification per status group (only when at least one non-empty response exists for that group — never prunes to zero). |
 | `max_array_representatives`  | integer or `"all"` | `8`      | Distinct elements retained per variable-length array. Integer `N` keeps a deterministic sample of up to N elements in first-seen order. `"all"` retains every distinct element. |
@@ -243,36 +236,17 @@ route  = "POST /v1/assets/actions/search"
 fields = ["$.bulksearchv1AssetsInput.filter.parentId"]
 ```
 
-### `[generate.route_normalization]`
-
-| Field                      | Type | Default | Description                         |
-|----------------------------|------|---------|-------------------------------------|
-| `numeric_ids`              | bool | `true`  | Collapse `/users/123` -> `/users/:id` |
-| `prefix_pattern_ids`       | bool | `true`  | Collapse prefix-style IDs            |
-| `value_flow_confirmation`  | bool | `true`  | Use value-flow graph to confirm      |
-| `structural_alignment`     | bool | `false` | Experimental structural alignment    |
-
 ### `[generate.guard_inference]`
 
 | Field              | Type   | Default           | Description                    |
 |--------------------|--------|-------------------|--------------------------------|
 | `algorithm`        | string | `"decision_tree"` | `decision_tree` or `rule_list` |
 | `max_depth`        | u32    | `4`               | Max decision tree depth        |
-| `z3_minimization`  | bool   | `false`           | Use Z3 to minimise guards      |
-
-### `[generate.type_inference]`
-
-| Field                     | Type | Default | Description                          |
-|---------------------------|------|---------|--------------------------------------|
-| `cross_route_unification` | bool | `true`  | Unify types across routes            |
-| `enum_max_values`         | u32  | `5`     | Max distinct values before non-enum  |
-| `enum_min_samples`        | u32  | `3`     | Min samples to confirm enum type     |
 
 ### `[generate.routing]`
 
 | Field            | Type     | Default | Description                          |
 |------------------|----------|---------|--------------------------------------|
-| `default_runner` | string?  | not set  | Default LLM runner name              |
 | `fallback`       | string[] | `[]`    | Fallback runner chain                |
 | `air_gapped`     | bool     | `false` | Disable all network-based runners    |
 
@@ -283,22 +257,6 @@ fields = ["$.bulksearchv1AssetsInput.filter.parentId"]
 | `command` | string   | required | Runner executable               |
 | `args`    | string[] | `[]`    | Command-line arguments          |
 | `format`  | string?  | not set  | Output format (`json`, etc.)    |
-
-### `[refresh]`
-
-| Field              | Type   | Default           | Description                     |
-|--------------------|--------|-------------------|---------------------------------|
-| `sample_strategy`  | string | `"risk_weighted"` | `risk_weighted`, `random`, `coverage` |
-| `budget_requests`  | u64    | `500`             | Max requests per refresh cycle  |
-
-### `[recordings]`
-
-| Field               | Type | Default | Description                        |
-|---------------------|------|---------|------------------------------------|
-| `max_sessions`      | u64  | `1000`  | Max recording sessions retained    |
-| `max_total_size_mb` | u64  | `5000`  | Max total recording size (MB)      |
-| `retention_days`    | u64  | `90`    | Delete recordings older than this  |
-| `max_body_size_mb`  | u64  | `10`    | Max body size per exchange (MB)    |
 
 ### `[passthrough]`
 
@@ -334,11 +292,8 @@ Permitted modifications. Defaults prevent accidental data loss; only set when ex
 
 | Field                   | Type | Default | Description                                       |
 |-------------------------|------|---------|---------------------------------------------------|
-| `add_routes`            | bool | `true`  | Allow adding new routes                           |
 | `add_variants`          | bool | `true`  | Allow adding disjoint variants on existing routes |
-| `add_schema_extensions` | bool | `true`  | Allow extending the schema                        |
 | `add_fixture_sets`      | bool | `true`  | Allow adding new fixture sets                     |
-| `add_fault_profiles`    | bool | `true`  | Allow adding new fault profiles                   |
 | `add_lua_handlers`      | bool | `false` | Allow adding Lua handlers                         |
 | `override_variants`     | bool | `false` | Allow overriding existing variants                |
 | `override_fixtures`     | bool | `false` | Allow overriding existing fixtures                |
@@ -347,6 +302,14 @@ Permitted modifications. Defaults prevent accidental data loss; only set when ex
 An `override_*` capability requires the matching `add_*` to also be enabled — `wraith lint` flags this as `capability-inconsistent`.
 
 ---
+
+### Keys removed in v0.21.0
+
+25 keys were schema-declared and documented here but read by no code path — setting one changed nothing. They are gone. Existing configs still load: `wraith` now warns once per key and names the replacement where there is one.
+
+Three whole sections were removed — `[generate.route_normalization]`, `[generate.type_inference]` and `[refresh]` — along with the three `[capabilities]` add-toggles, `diff.thresholds.status_exact_match`, `generate.regression_tolerance`, the `[generate.symbolization]` filters, two `[generate.anti_unification]` knobs, `generate.guard_inference.z3_minimization`, `generate.routing.default_runner`, and the four `[recordings]` size/retention limits.
+
+Path parameterisation, type inference and symbolisation thresholds are not configurable — they are inferred from your recordings. For recording retention, use `wraith gc`. For refresh sampling, use `wraith refresh --sample`.
 
 ## scrub.toml
 
@@ -380,7 +343,7 @@ Default PII detection runs on every recorded body and outbound response (`wraith
 |------------------|--------------|--------------|------------------------------------------------------------|
 | `detect`         | bool         | `true`       | Master toggle. When `false`, `wraith doctor` skips the PII audit pass entirely (other doctor checks still run). |
 | `allowlist`      | string[]     | `[]`         | JSONPath-style glob patterns that bypass PII detection. `*` matches one path segment; leading `$` is anchor-stripped; matching is suffix-based. |
-| `default_action` | string       | `"tokenize"` | Action emitted when writing scrubbed PII. `tokenize`, `redact`, or `reject`. **Note**: parsed and stored for round-trip; not yet enforced at scrub-write time. |
+| `default_action` | string       | `"tokenize"` | What happens to PII the scrub pass flags. `tokenize` replaces the value with a keyed token (the default). `reject` refuses to record the exchange at all, counting as a policy violation. `redact` drops the value. Enforced since v0.21.0 — before that every capture tokenized regardless of this setting. |
 | `fields.always`  | string[]     | `[]`         | JSON paths unconditionally treated as PII regardless of cardinality detection. Used when auto-detection misclassifies a real PII field as enum (e.g. a small fixture where every entity has `"Alice"`). |
 
 The detection chain is `fields.always` (forced) → `allowlist` (suppressed) → cardinality-detected `enum_paths` (skipped) → default name-key allowlist → heuristic classification. `allowlist` is the highest-precedence suppression layer.
