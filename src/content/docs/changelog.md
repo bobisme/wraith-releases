@@ -3,6 +3,31 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.22.0 — 2026-08-11
+
+**Handler authoring, and tools that stop crying wolf.** Most of this release came from one user's report after building a twin by hand. The theme: the tools were technically correct and practically useless — a handler that bound to the wrong route without saying so, a linter that failed every healthy twin, warnings that buried the output you asked for, and a bind error that named no culprit.
+
+### Lua handlers
+
+- **A singular handler no longer swallows the collection route.** `get_asset.lua` bound to `GET /v3/assets/:id` *and* to `GET /v3/assets`, silently replacing the recorded list response with the handler's output. The twin looked healthy — the reporter found it only by deleting the file and watching the list come back. A read request ending at a collection now binds the list-shaped names only. Genuine sub-resources like `get_invoice.lua` on `GET /orders/:id/invoice` are unaffected. **Should I do anything?** If you relied on a singular handler answering a collection, rename it to the plural form.
+- **Every `handler file → route` binding is logged at startup.** Previously you got a count and nothing else, so a wrong binding was invisible.
+- **JSON decoding is built in.** `wraith.json_decode` and `wraith.json_encode` replace vendoring a Lua JSON parser, which every handler that reads a request body previously had to do. One current limitation: handlers receive only bodies that parse as JSON, so a malformed body arrives as `{}` and the usual "reject bad input with 400" guard cannot fire yet. That is a known defect and is being fixed.
+- **A twin can declare a route no recording covers.** A handler binds to routes the twin already has, so a twin recorded read-only — the safe way to record someone else's API — had no write routes to bind to, which is exactly when you want to author one. `wraith route add <twin> --method PATCH --path /v3/assets/:id` writes a `lua/routes.toml` sidecar that survives re-synth. Authored routes are marked as authored, never counted as recorded evidence, and never written into the model. If a recording later covers the same route, the recorded one wins.
+
+### Tools that tell the truth
+
+- **`wraith lint` no longer fails every healthy twin.** It demanded a digest that only `wraith compose` ever writes, so a freshly synthesized twin failed by construction — reported as 51 failures on a twin that served perfectly. A rule that fires on every healthy twin carries no signal and teaches you to ignore the real findings beside it. **Should I do anything?** Re-run `wraith lint`; any remaining finding is real.
+- **Dead config keys warn once instead of on every load.** A `wraith.toml` from an older version produced 72 warning lines on a single command, scrolling the output you wanted off the screen — including `serve`'s startup lines. They now collapse to one line, visible to `--format json` consumers for the first time, with the full list behind `--explain`. **Should I do anything?** Run `wraith migrate <twin>` to remove the dead keys; it preserves every live key, comment, and your formatting.
+- **A bind failure names the process holding the port.** "Address already in use" now tells you which process holds it, whether it is another wraith, which twin it serves, and how to stop it. A bare `wraith serve` also registers itself, so `wraith status` and `wraith down` can see twins that were not started by `wraith up` — the case that let four abandoned servers hold ports for days while every command reported nothing running.
+- **`wraith record` warns when a session recorded nothing but failures.** A twin recorded against an unroutable endpoint produced 650 exchanges, every one an error, and passed conformance for four months because reproducing an error faithfully is easy.
+- **`wraith diff` compares against the twin it claims to diagnose.** It previously replayed through a path that bypassed the model, Lua handlers, and state entirely.
+- **`wraith check` says when the model it scored no longer matches your recordings.**
+
+### Conformance
+
+- **Nested fields inside list elements are checked.** The element check stopped at the first level, so anything deeper produced no finding at all — not a warning, nothing. It now descends two levels, which surfaced a real missing field that had been invisible.
+- **32-character hex ids parameterize again**, so routes that mint them stop fragmenting into one route per id.
+
 ## v0.21.0 — 2026-08-06
 
 **Twins stop giving you empty answers and merged routes.** This release is mostly about a twin telling you the truth about what it recorded. Several long-standing defects had the same shape: the twin held a perfectly good recording and served something emptier or vaguer instead — an empty list, a merged route, a `404` on an endpoint that exists. Conformance scored all of it as passing, because it wasn't asking.

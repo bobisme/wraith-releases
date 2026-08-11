@@ -48,6 +48,10 @@ For sub-resource routes (`GET /orders/:id/invoice`) the convention switches to H
 
 First match wins. Routes that don't match any handler fall through to the synth template — silently, no warning. This is intentional: most routes don't need a handler.
 
+A read request whose path ends at a collection (`GET /v3/assets`, no id) will **not** bind a singular handler such as `get_asset.lua`. It binds the list-shaped names only — `list_assets`, `index_assets`, `get_assets`, or the bare collection name. Before v0.22.0 the singular name captured the collection route too, silently replacing the recorded list response with the handler's output. Genuine singular sub-resources are unaffected: `get_invoice.lua` still binds `GET /orders/:id/invoice`, because `invoice` names one thing rather than a collection.
+
+`wraith serve` logs every `handler file → route` binding at startup, so you can confirm what bound where instead of inferring it.
+
 ### How `<entity>` and `<seg>` are derived
 
 `<entity>` comes from the route's inferred entity type — the collection segment of the path (the segment before the id parameter, e.g. `customers` in `/v1/customers/:id`, or the last segment for a list route like `/v1/charges`). Version prefixes (`v1`, `v2`, …) are skipped.
@@ -72,6 +76,36 @@ Always name handler files in `snake_case` — `get_license_agreement.lua`, not `
 
 The `lua_hook` field on a variant is an explicit, advanced override — it pins one variant to a named handler regardless of filename. **`wraith synth` never writes `lua_hook`, and re-synth rebuilds variants from recordings, so any hand-edited `lua_hook` is dropped on the next synth.** Don't rely on it for normal binding. The filename convention above is the supported, re-synth-safe mechanism: drop a correctly named file in `lua/handlers/` and it keeps binding across every re-synth, because the binding is derived from the route, not stored in the model.
 
+## Routes no recording covers
+
+A handler binds to a route the twin already has. It cannot invent one — so if you recorded read-only (the safe way to record a third-party API), every write route is missing and `update_asset.lua` binds nothing. Since v0.22.0 you declare the missing route in a sidecar:
+
+```bash
+wraith route add my-twin --method PATCH --path '/v3/assets/:param'
+wraith route list my-twin
+```
+
+That writes `lua/routes.toml` next to your handlers:
+
+```toml
+schema_version = 1
+
+[[route]]
+method = "PATCH"
+path = "/v3/assets/:param"
+# status = 202                      # optional
+# response = '{"status":"queued"}'  # optional; a JSON string
+```
+
+The route then exists at serve time and your handler binds to it by the usual filename convention. Declare a `response` and no handler, and the twin serves that body; declare neither and the route answers `501` saying so, rather than inventing a `200`.
+
+Two things to know:
+
+- **The sidecar lives outside `model/`, so `wraith synth` never overwrites it.** That is the whole point — hand-edits to the model are lost on the next re-synth.
+- **Authored routes carry no evidence.** They are marked as authored rather than recorded, conformance never scores them, and they never enter `model/`. If a recording later covers the same route, the recorded route wins and `wraith lint` tells you the declaration is shadowed. `wraith route list` is the authoritative answer to which routes are authored.
+
+Not yet supported: `wraith compose` does not merge an overlay's authored routes. Compose warns when an input carries the file, so the gap is visible rather than silent.
+
 ## The API surface
 
 Every handler sees four global tables.
@@ -83,8 +117,19 @@ req.method     -- "POST"
 req.path       -- "/v1/orders"
 req.headers    -- table with lowercase keys
 req.query      -- table of query string values
-req.body       -- raw request body as a string (or nil)
+req.body       -- request body as a JSON string (or nil) — see the caveat below
 ```
+
+:::caution[`req.body` is JSON, not the raw bytes]
+`req.body` is the request body **re-serialized from parsed JSON**, not the bytes the client sent. A body that does not parse as JSON — malformed JSON, plain text, XML, CSV — reaches your handler as the two-character string `{}`, with no way to tell it apart from a client that really sent `{}`.
+
+Two consequences today:
+
+- A handler cannot reject a malformed body. `wraith.json_decode(req.body)` succeeds and hands you an empty table, so the usual "answer 400 on bad input" guard never fires.
+- A handler cannot serve a non-JSON content type. Form-encoded bodies are parsed upstream and arrive as JSON; everything else arrives as `{}`.
+
+This is a known defect, not the intended contract, and it is being fixed. Write handlers that assume a JSON body for now.
+:::
 
 ### `emit` — write response
 
@@ -119,13 +164,25 @@ clock.advance(60)  -- advance the namespace clock; deterministic mode only
 
 When `[serve.clock] mode = "real"` (the default), `clock.now()` reads the system clock. When `mode = "deterministic"`, it reads from the seeded counter — same seed produces byte-identical timestamps across runs. See [Configuration → `[serve.clock]`](/configuration/#serveclock).
 
+## JSON
+
+`wraith.json_decode` and `wraith.json_encode` are built in — you no longer need to vendor a Lua JSON parser:
+
+```lua
+local body, err = wraith.json_decode(req.body)   -- → value, or nil + message
+local text      = wraith.json_encode(body)       -- → string
+```
+
+Decode returns `nil` plus a message on malformed input, so you can branch on it rather than trapping an error. Both are charged against the handler's CPU and wall-clock budget, and decode bounds input size and nesting depth.
+
+An empty Lua table encodes as `{}`. To emit `[]` instead, tag it: `setmetatable(t, wraith.array_mt)`. A table that came from `wraith.json_decode` already remembers which one it was and round-trips correctly.
+
 ## Importing libraries
 
 Files under `lua/lib/` are loadable via `wraith.import`:
 
 ```lua
-local json = wraith.import("json")
-local body = json.decode(req.body)
+local helpers = wraith.import("helpers")
 ```
 
 Each `wraith.import` call runs the library in an isolated scope and returns its exported module table.
@@ -136,9 +193,7 @@ Each `wraith.import` call runs the library in an isolated scope and returns its 
 
 ```lua
 -- POST /orders — create order with computed total.
-local json = wraith.import("json")
-
-local body = json.decode(req.body)
+local body = wraith.json_decode(req.body)
 if not body or not body.customer_id then
   emit.status(400)
   emit.json({ error = { code = "invalid_request", message = "customer_id is required" } })
