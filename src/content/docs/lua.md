@@ -117,18 +117,24 @@ req.method     -- "POST"
 req.path       -- "/v1/orders"
 req.headers    -- table with lowercase keys
 req.query      -- table of query string values
-req.body       -- request body as a JSON string (or nil) — see the caveat below
+req.body       -- raw request body bytes exactly as received (or nil)
 ```
 
-:::caution[`req.body` is JSON, not the raw bytes]
-`req.body` is the request body **re-serialized from parsed JSON**, not the bytes the client sent. A body that does not parse as JSON — malformed JSON, plain text, XML, CSV — reaches your handler as the two-character string `{}`, with no way to tell it apart from a client that really sent `{}`.
+`req.body` is the body the client sent, byte for byte — not a re-serialization of parsed JSON. A plain-text, XML or CSV body arrives intact, a malformed JSON body stays malformed so you can reject it, and a request with no body is `nil` rather than `{}`. Binary bodies survive too: Lua strings are byte strings.
 
-Two consequences today:
+:::caution[Validate the body yourself — always]
+A served twin hands your handler whatever the client sent. There is a platform-level check that answers `400` for a `POST`/`PUT`/`PATCH` that declares a JSON content type and sends a body that is not valid JSON, but it does **not** run on the served HTTP path — it applies during `wraith check`. Do not rely on it to keep malformed bodies away from a running twin.
 
-- A handler cannot reject a malformed body. `wraith.json_decode(req.body)` succeeds and hands you an empty table, so the usual "answer 400 on bad input" guard never fires.
-- A handler cannot serve a non-JSON content type. Form-encoded bodies are parsed upstream and arrive as JSON; everything else arrives as `{}`.
+So validate in the handler, for every case: bodies that are not JSON at all, requests with no declared content type, and bodies that parse as JSON but are wrong for your route.
 
-This is a known defect, not the intended contract, and it is being fixed. Write handlers that assume a JSON body for now.
+```lua
+local body, err = wraith.json_decode(req.body)
+if not body then
+  emit.status(400)
+  emit.json({ error = "bad_request", detail = err })
+  return
+end
+```
 :::
 
 ### `emit` — write response
@@ -147,13 +153,54 @@ Backed by the same per-namespace state store the synth dispatcher uses, so handl
 
 ```lua
 state.get(entity_type, id)                  -- → table | nil
-state.put(entity_type, id, data)            -- upsert; returns true
-state.delete(entity_type, id)               -- → true
+state.put(entity_type, id, data)            -- upsert (merges, see below); returns true
+state.delete(entity_type, id)               -- → true if it existed, false if not
 state.list(entity_type)                     -- → table of all entities of that type
 state.query(entity_type, field, value)      -- → array of entities where field == value
 state.count(entity_type)                    -- → number
 state.counter(name)                         -- atomic increment, returns new value
 ```
+
+#### Declare your entity types first
+
+Every `state` call validates `entity_type` against the twin's `state/schema.json`. A write to a type that is not declared there **fails the handler**, with a message naming the type. A twin recorded read-only starts with an empty schema, so this is usually the first thing a hand-written handler needs:
+
+```json
+{ "schema_version": 1,
+  "entity_types": { "orders": { "primary_key": "id", "indexes": [], "foreign_keys": [] } } }
+```
+
+#### `state.put` merges, it does not replace
+
+An id that already exists is **merged**, not overwritten:
+
+```lua
+state.put("orders", "o1", { a = 1, nested = { x = 1, y = 2 }, arr = { 1, 2, 3 } })
+state.put("orders", "o1", { b = 2, nested = { y = 99 },       arr = { 9 }       })
+-- → { a = 1, b = 2, nested = { x = 1, y = 99 }, arr = { 9 } }
+```
+
+- top-level keys accumulate — `a` survives a put that never mentions it
+- nested **objects** merge key by key, at any depth — `nested.x` survives
+- arrays and scalars are replaced whole — `arr` becomes `{ 9 }`
+- nothing is ever removed; writing `nil` does not delete a field
+
+To truly replace an entity, delete it first:
+
+```lua
+state.delete("orders", id)
+state.put("orders", id, fresh)
+```
+
+#### `state.query` compares exactly, on one key
+
+`state.query(t, field, value)` keeps entities whose `field` **equals** `value`: an exact comparison against a single top-level key. Three things come back as an empty array rather than an error, which is worth knowing when a query returns nothing:
+
+- **types must match** — a stored number `7` does not match the string `"7"`, or the reverse
+- **`field` is a key, not a path** — `"nest.k"` looks for a key literally named `nest.k` and never descends into `nest`
+- **an absent field never matches**
+
+For anything richer, read the set with `state.list` and filter it in Lua.
 
 ### `clock` — deterministic time
 
@@ -175,7 +222,32 @@ local text      = wraith.json_encode(body)       -- → string
 
 Decode returns `nil` plus a message on malformed input, so you can branch on it rather than trapping an error. Both are charged against the handler's CPU and wall-clock budget, and decode bounds input size and nesting depth.
 
-An empty Lua table encodes as `{}`. To emit `[]` instead, tag it: `setmetatable(t, wraith.array_mt)`. A table that came from `wraith.json_decode` already remembers which one it was and round-trips correctly.
+### Shapes and nulls
+
+Two things about the Lua↔JSON boundary will surprise you once each.
+
+**An empty table is ambiguous.** Lua has one table type, so `{}` cannot say whether it means an empty object or an empty list; it encodes as `{}`. Tag it to force a list:
+
+```lua
+local rows = {}
+setmetatable(rows, wraith.array_mt)   -- now encodes as [] even when empty
+```
+
+A table that came from `wraith.json_decode` already remembers which one it was, so decoded values round-trip through both `emit.json` and the state store with `[]`, `{}` and `null` intact. You only need the tag for lists you build yourself.
+
+**Decoded `null` is a sentinel, not `nil`.** A JSON `null` decodes to a value that re-encodes as `null`, which means `type(v)` is `"userdata"` and — the part that bites — `v == nil` is **false** and `if v then` is **true**. To test for a JSON null, compare against a decoded one, or check the key's presence separately.
+
+### Values that cannot be JSON
+
+Handing `emit.json` a function, a userdata, a coroutine, or a table containing one **fails the handler** rather than emitting a partial body. Convert first with `tostring()`. The common way to hit this is embedding a caught error:
+
+```lua
+local ok, err = pcall(function() return state.get("orders", id) end)
+if not ok then
+  emit.error(500, "state_failure", "lookup failed: " .. err)   -- err is a string
+  return
+end
+```
 
 ## Importing libraries
 
@@ -185,7 +257,7 @@ Files under `lua/lib/` are loadable via `wraith.import`:
 local helpers = wraith.import("helpers")
 ```
 
-Each `wraith.import` call runs the library in an isolated scope and returns its exported module table.
+A library runs in an isolated scope — it never pollutes globals — and `wraith.import` returns its exported module table. Within one handler invocation the module is cached, so importing the same library twice returns the *same* table and the source is executed once. The cache lives and dies with the invocation: module state never carries from one request to the next, or between sessions.
 
 ## A minimal handler
 
@@ -266,10 +338,25 @@ What IS available:
 Per-invocation limits:
 
 - **100 ms wall-clock timeout.** Long-running handlers get killed.
-- **1 MB memory limit.**
+- **1024 KiB memory.** Configurable: `[serve.lua] max_memory_kb`.
 - **100,000 Luau instructions.** CPU budget.
 
 Exceeding any limit raises a handler error and falls into the configured `on_error` policy.
+
+The memory ceiling bounds one invocation, and it covers everything the VM allocates — the decoded request body, every table you build, and the encoded response. Intermediate Lua tables cost far more than the JSON they turn into: a handler assembling a few thousand small records can exceed 1024 KiB while producing barely 100 KB of output. Exceeding it names the ceiling and the memory in use:
+
+```
+handler 'list_orders' exceeded its 1024 KiB Lua memory limit; the VM held
+1021 KiB at the failure. Raise it with [serve.lua] max_memory_kb, or build
+the response in smaller pieces.
+```
+
+Raise it when a handler legitimately needs the room:
+
+```toml
+[serve.lua]
+max_memory_kb = 8192
+```
 
 ## Error handling
 
@@ -293,6 +380,20 @@ In `fail` mode, an uncaught handler error returns HTTP 500 with a structured env
 ```
 
 In `fallback` mode (legacy), the error is logged and dispatch falls through to the synth template. This hides bugs and is opt-in only for compatibility with twins authored before `on_error` shipped.
+
+### Catching errors yourself
+
+`state.*` and `wraith.*` raise plain **strings**, so `pcall` behaves the way Lua code expects — you can test, concatenate, and emit the message directly:
+
+```lua
+local ok, err = pcall(function() return wraith.import("pricing") end)
+if not ok then
+  emit.error(503, "handler_dependency", err)   -- type(err) == "string"
+  return
+end
+```
+
+Failures that raise rather than return a value: writing to an entity type absent from `state/schema.json`, passing `emit.json` something that cannot be JSON, exceeding a per-invocation limit, and importing a library that does not exist.
 
 ## Your handler's output is checked
 
