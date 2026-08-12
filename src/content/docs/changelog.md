@@ -3,6 +3,31 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## Unreleased
+
+**Handlers stop failing silently.** Another report from someone building twins by hand, and nearly every item had the same shape: a handler did something wrong, wraith answered `200`, and nothing anywhere said so. A write that vanished reported success. A response body that got thrown away came back as `{}`. A "reset everything" endpoint answered `200` and reset nothing. None of these produced a log line, so the only way to find them was to notice much later that the data was wrong.
+
+### Breaking: four handler behaviors changed
+
+If you write Lua handlers, read this section. Three things that used to appear to succeed now fail the handler, and they fail deliberately — each one was discarding your data or your output quietly.
+
+- **Writing to an entity type that isn't in `state/schema.json` now fails the handler.** It used to return `true` and drop the write, so every later read came back empty for no visible reason. **Should I do anything?** Declare your entity types in the twin's `state/schema.json`. A twin recorded read-only starts with none, so this is usually the first thing a hand-written handler needs. The error names the missing type.
+- **`emit.json` with a value that cannot be JSON now fails the handler.** A single function, coroutine, or caught error anywhere in the table used to discard **the entire response body** and answer `200 {}` — indistinguishable from a legitimately empty response, and nothing was logged. **Should I do anything?** Convert such values with `tostring()` before emitting them.
+- **`state.delete` returns `false` for an id that was not there.** It previously returned `true` no matter what. **Should I do anything?** Only if you branch on its return value.
+- **Errors from `state.*` and `wraith.*` are now plain strings.** They used to arrive as userdata, so `type(err)` was not `"string"` and `"failed: " .. err` raised a *second* error inside the code meant to report the first. `pcall` now behaves the way Lua code expects.
+
+### Handlers
+
+- **`[serve.lua] max_memory_kb` sets the per-invocation memory ceiling.** It was fixed at 1024 KiB with no way to change it, and the failure said only "exceeded memory limit" — no ceiling, no usage, no knob to reach for. The message now names all three. Worth knowing: the ceiling covers everything the VM allocates, and intermediate Lua tables cost far more than the JSON they become, so a handler assembling a few thousand small records can exceed 1024 KiB while producing barely 100 KB of output.
+- **`wraith.import` caches within an invocation.** Two imports of one library returned two different module tables and re-ran the source each time, which also spent the memory budget above. The same library now returns the same table. The cache never outlives the request, so module state cannot leak between requests or sessions.
+- **Handlers receive the request body exactly as sent.** This retires the limitation noted in v0.22.0: a malformed or non-JSON body reached the handler as `{}`, so the usual "reject bad input with `400`" guard could not fire. Plain text, XML, CSV, and binary bodies now arrive intact, and a request with no body is `nil` rather than `{}`. **Should I do anything?** If you worked around this by treating `{}` as "bad body", revisit that check — and note that a served twin does not reject malformed JSON for you, so validate in the handler.
+
+### Twins and tools
+
+- **`POST /__wraith/reset` actually resets a twin.** In the default synth mode it answered `200` and cleared nothing — a silent no-op. Everything that resets a twin between runs goes through it, including `wraith up`'s `reset_on_start` and conformance runs against a live twin, so state leaked across all of them. Per-session reset was never affected and has always worked. **Should I do anything?** If you built a workaround — restarting the twin between test runs, or using per-session reset because the global one seemed broken — you can drop it.
+- **`wraith serve` and `wraith run` accept every twin name the other commands do.** A twin whose name starts with something registry-shaped, like `ghcr.io/acme/api`, could be created by `wraith init` and passed by `wraith lint`, then refused by `serve` as an unpinned image reference. A local twin now always wins over that reading. Genuine image references are still refused without a digest pin.
+- **Conformance decodes gRPC request bodies before replaying them.** The check handed raw wire frames to a twin that expected decoded fields, so echoed values and body-based routing saw an empty request during replay.
+
 ## v0.22.0 — 2026-08-11
 
 **Handler authoring, and tools that stop crying wolf.** Most of this release came from one user's report after building a twin by hand. The theme: the tools were technically correct and practically useless — a handler that bound to the wrong route without saying so, a linter that failed every healthy twin, warnings that buried the output you asked for, and a bind error that named no culprit.
