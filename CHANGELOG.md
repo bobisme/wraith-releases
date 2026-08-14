@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.23.1 — 2026-08-14
+
+**Two silent `state` traps closed.** Both were reported by a consumer agent rechecking their findings against 0.23.0, and both had the same shape: a call that looked like it worked and quietly did the wrong thing.
+
+- **A `state` call with a missing argument now fails instead of guessing.** `state.query(entity_type, field)` — the value argument left off — silently became a "field equals null" filter and returned an empty array, which is indistinguishable from an honest "no rows matched". That empty result got read as a broken query engine twice, by two different people, and the engine was fine both times. `state.put(entity_type, id)` was worse: it returned `true` and stored a null record that `state.count` then counted. Both now raise and name the expected arguments. **Should I do anything?** If a handler passes the wrong number of arguments, it will now fail loudly where it previously returned nothing or wrote a null — that call was already not doing what it looked like it was doing. Passing `nil` explicitly as a query value is still a valid filter for a JSON null.
+- **`state.query` matches nested fields and compares scalars across types.** `state.query(t, "nest.k", v)` looked for a key spelled literally `nest.k`, found nothing, and returned an empty array; it now walks the path. A stored number `7` no longer fails to match the string `"7"`, or the reverse — the same leniency the query-string filters on list routes have always used, so the two filter paths in a twin no longer answer the same question differently. A key that genuinely contains a dot still matches exactly, and arrays and objects still require an exact match.
+
 ## v0.23.0 — 2026-08-12
 
 **Handlers stop failing silently.** Another report from someone building twins by hand, and nearly every item had the same shape: a handler did something wrong, wraith answered `200`, and nothing anywhere said so. A write that vanished reported success. A response body that got thrown away came back as `{}`. A "reset everything" endpoint answered `200` and reset nothing. None of these produced a log line, so the only way to find them was to notice much later that the data was wrong.

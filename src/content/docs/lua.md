@@ -192,13 +192,21 @@ state.delete("orders", id)
 state.put("orders", id, fresh)
 ```
 
-#### `state.query` compares exactly, on one key
+#### `state.query` matches one field
 
-`state.query(t, field, value)` keeps entities whose `field` **equals** `value`: an exact comparison against a single top-level key. Three things come back as an empty array rather than an error, which is worth knowing when a query returns nothing:
+`state.query(t, field, value)` keeps entities whose `field` equals `value`.
 
-- **types must match** — a stored number `7` does not match the string `"7"`, or the reverse
-- **`field` is a key, not a path** — `"nest.k"` looks for a key literally named `nest.k` and never descends into `nest`
-- **an absent field never matches**
+```lua
+state.query("orders", "status", "paid")     -- top-level key
+state.query("orders", "customer.id", "c1")  -- dotted path, any depth
+state.query("orders", "total", "42")        -- matches a stored number 42
+```
+
+- **`field` may be a dotted path** into nested objects. A key that genuinely contains a dot wins over the path reading, so existing data never changes meaning. Paths walk objects only — `"items.0"` looks for a key named `0`, not the first array element.
+- **Scalars compare across types.** A stored number `7` matches the string `"7"` and the reverse, the same way query-string filters on list routes behave. Arrays and objects still require an exact match.
+- **An absent field never matches**, and a miss is an empty array rather than an error.
+
+Pass all three arguments. Omitting the value raises rather than quietly matching nothing — a two-argument call used to return an empty array that was indistinguishable from "no rows matched". To filter for a JSON `null`, pass `nil` explicitly.
 
 For anything richer, read the set with `state.list` and filter it in Lua.
 
