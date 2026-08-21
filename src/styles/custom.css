@@ -5,53 +5,53 @@
    ======================================================= */
 
 @font-face {
-  font-family: 'Instrument Serif';
+  font-family: "Instrument Serif";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/instrument-serif-regular.ttf') format('truetype');
+  src: url("/fonts/instrument-serif-regular.ttf") format("truetype");
 }
 @font-face {
-  font-family: 'Instrument Serif';
+  font-family: "Instrument Serif";
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/instrument-serif-italic.ttf') format('truetype');
+  src: url("/fonts/instrument-serif-italic.ttf") format("truetype");
 }
 @font-face {
-  font-family: 'JetBrains Mono';
+  font-family: "JetBrains Mono";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/jetbrains-mono-400.ttf') format('truetype');
+  src: url("/fonts/jetbrains-mono-400.ttf") format("truetype");
 }
 @font-face {
-  font-family: 'JetBrains Mono';
+  font-family: "JetBrains Mono";
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('/fonts/jetbrains-mono-600.ttf') format('truetype');
+  src: url("/fonts/jetbrains-mono-600.ttf") format("truetype");
 }
 @font-face {
-  font-family: 'Space Grotesk';
+  font-family: "Space Grotesk";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/fonts/space-grotesk-400.ttf') format('truetype');
+  src: url("/fonts/space-grotesk-400.ttf") format("truetype");
 }
 @font-face {
-  font-family: 'Space Grotesk';
+  font-family: "Space Grotesk";
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/fonts/space-grotesk-500.ttf') format('truetype');
+  src: url("/fonts/space-grotesk-500.ttf") format("truetype");
 }
 @font-face {
-  font-family: 'Space Grotesk';
+  font-family: "Space Grotesk";
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('/fonts/space-grotesk-600.ttf') format('truetype');
+  src: url("/fonts/space-grotesk-600.ttf") format("truetype");
 }
 
 /* =======================================================
@@ -80,13 +80,13 @@
   --w-warn: #f6b861;
   --w-danger: #f87171;
 
-  --w-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --w-font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --w-font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+  --w-font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --w-font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --w-font-serif: "Instrument Serif", ui-serif, Georgia, serif;
 }
 
 :root,
-[data-theme='dark'] {
+[data-theme="dark"] {
   /* Surface architecture */
   --sl-color-bg: var(--w-bg);
   --sl-color-bg-nav: rgba(7, 9, 12, 0.75);
@@ -113,7 +113,7 @@
   --sl-color-text-accent: #7df9ff;
 
   /* Typography */
-  --sl-font: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --sl-font: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --sl-font-mono: var(--w-font-mono);
 
   /* 2px border radius */
@@ -128,7 +128,8 @@
 /* =======================================================
    Base
    ======================================================= */
-html, body {
+html,
+body {
   background: var(--w-bg);
   color: var(--sl-color-text);
   font-family: var(--sl-font);
@@ -140,9 +141,11 @@ body {
 
 /* Faint grid wash */
 body::before {
-  content: '';
-  position: fixed; inset: 0;
-  pointer-events: none; z-index: 0;
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
@@ -150,10 +153,18 @@ body::before {
   mask-image: radial-gradient(ellipse at 50% 0%, black 40%, transparent 85%);
 }
 
-::selection { background: rgba(125, 249, 255, 0.25); color: #fff; }
+::selection {
+  background: rgba(125, 249, 255, 0.25);
+  color: #fff;
+}
 
 /* Headings — Instrument Serif editorial treatment */
-h1, h2, h3, h4, h5, h6,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
 .sl-markdown-content h1,
 .sl-markdown-content h2,
 .sl-markdown-content h3,
@@ -170,9 +181,11 @@ h1, h2, h3, h4, h5, h6,
   letter-spacing: -0.025em;
 }
 .sl-markdown-content h2 {
+  display: inline-block;
+  width: 100%;
   font-size: 1.9rem;
   line-height: 1.15;
-  margin-top: 3.25rem;
+  /* margin-top: 3.25rem; */
   padding-top: 1.25rem;
   border-top: 1px solid var(--w-line);
 }
@@ -198,7 +211,10 @@ h1, h2, h3, h4, h5, h6,
 .sl-markdown-content p {
   color: var(--w-ink-dim);
 }
-.sl-markdown-content strong { color: var(--w-ink); font-weight: 500; }
+.sl-markdown-content strong {
+  color: var(--w-ink);
+  font-weight: 500;
+}
 
 /* Inline code */
 .sl-markdown-content :not(pre) > code {
@@ -218,14 +234,18 @@ h1, h2, h3, h4, h5, h6,
   border-bottom: 1px solid rgba(125, 249, 255, 0.3);
   transition: border-color 0.2s;
 }
-.sl-markdown-content a:hover { border-bottom-color: var(--w-ghost); }
+.sl-markdown-content a:hover {
+  border-bottom-color: var(--w-ghost);
+}
 
 /* Lists */
 .sl-markdown-content ul li,
 .sl-markdown-content ol li {
   color: var(--w-ink-dim);
 }
-.sl-markdown-content ul li::marker { color: var(--w-ghost); }
+.sl-markdown-content ul li::marker {
+  color: var(--w-ghost);
+}
 
 /* =======================================================
    Nav header
@@ -282,16 +302,23 @@ nav.sidebar a {
   border-radius: 0 !important;
   padding-top: 5px;
   padding-bottom: 5px;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
 }
 nav.sidebar a:hover {
   color: var(--w-ink);
   border-left-color: var(--w-line-bright);
   background: transparent;
 }
-nav.sidebar a[aria-current='page'],
-nav.sidebar a[aria-current='page']:hover {
-  background: linear-gradient(90deg, rgba(125, 249, 255, 0.05), transparent 70%);
+nav.sidebar a[aria-current="page"],
+nav.sidebar a[aria-current="page"]:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(125, 249, 255, 0.05),
+    transparent 70%
+  );
   border-left: 1px solid var(--w-ghost);
   color: var(--w-ghost) !important;
   border-radius: 0;
@@ -316,7 +343,7 @@ starlight-toc a {
   border-radius: 0 !important;
 }
 starlight-toc a:hover,
-starlight-toc a[aria-current='true'] {
+starlight-toc a[aria-current="true"] {
   color: var(--w-ghost);
   background: transparent;
 }
@@ -378,8 +405,12 @@ pre,
   color: var(--w-ink-mute);
   background: var(--w-bg-2);
 }
-.sl-markdown-content table td { color: var(--w-ink-dim); }
-.sl-markdown-content table tr:last-child td { border-bottom: 0; }
+.sl-markdown-content table td {
+  color: var(--w-ink-dim);
+}
+.sl-markdown-content table tr:last-child td {
+  border-bottom: 0;
+}
 
 /* =======================================================
    Callouts / asides
@@ -391,9 +422,15 @@ pre,
   border-radius: 2px;
   padding: 16px 20px;
 }
-.sl-markdown-content .starlight-aside--tip { border-left-color: var(--w-ghost-3); }
-.sl-markdown-content .starlight-aside--caution { border-left-color: var(--w-warn); }
-.sl-markdown-content .starlight-aside--danger { border-left-color: var(--w-danger); }
+.sl-markdown-content .starlight-aside--tip {
+  border-left-color: var(--w-ghost-3);
+}
+.sl-markdown-content .starlight-aside--caution {
+  border-left-color: var(--w-warn);
+}
+.sl-markdown-content .starlight-aside--danger {
+  border-left-color: var(--w-danger);
+}
 
 .sl-markdown-content .starlight-aside__title {
   font-family: var(--w-font-mono);
@@ -434,7 +471,8 @@ pre,
 /* =======================================================
    Cards (starlight's <Card> component)
    ======================================================= */
-.sl-card, .card {
+.sl-card,
+.card {
   background: var(--w-bg-1) !important;
   border: 1px solid var(--w-line) !important;
   border-radius: 4px !important;
@@ -461,13 +499,20 @@ pre,
 /* =======================================================
    Scrollbar
    ======================================================= */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--w-bg); }
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--w-bg);
+}
 ::-webkit-scrollbar-thumb {
   background: var(--w-line-2);
   border-radius: 10px;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--w-line-bright); }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--w-line-bright);
+}
 
 /* =======================================================
    Search
