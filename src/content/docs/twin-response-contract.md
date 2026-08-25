@@ -226,13 +226,29 @@ other response.
 X-Wraith-Replay: series-moment;v=1
 ```
 
-**Value grammar.** `<class>;v=<n>` — a class token and a decimal version.
-Two classes are defined today, and both license the same strictness:
+**Value grammar.** `<class>;v=<n>[;<parameter>]` — a class token, a decimal
+version, and zero or more parameters. Two classes are defined today, and both
+license the same strictness:
 
 | Value | Meaning |
 |-------|---------|
-| `series-moment;v=1` | The body is a **verbatim** moment of the route's per-session exact time axis: the moment that occupied *this request's own position* in the recorded run, with nothing merged into it. Every position of it is the recording's own bytes. |
-| `session-bound-moment;v=1` | The body is that same moment with **your own values** substituted at the response paths the model proved are session-authored. It answers an *unaddressed* read — one literal path, no query, no body — whose recorded answer, in every observation, repeated a value the same session had supplied in the body of an earlier create. Every other position is the moment's own bytes. Assert it exactly, as you would a `series-moment`; what you may not expect is the recording's value at the substituted paths. |
+| `series-moment;v=1` | The body is a **verbatim** moment of the route's per-session exact time axis: the moment that occupied *this request's own position* in the recorded run, with nothing merged into it. Every position of it carries the recording's own value. |
+| `session-bound-moment;v=1` | The body is that same moment with **your own values** substituted at the response paths the model proved are session-authored. It answers an *unaddressed* read — one literal path, no query, no body — whose recorded answer, in every observation, repeated a value the same session had supplied in the body of an earlier create. Every other position is the moment's own value. Assert it exactly, as you would a `series-moment`; what you may not expect is the recording's value at the substituted paths. |
+
+**Parameters.** One is defined today. It never changes how strictly you may
+assert the body — only which bytes you must compare it against.
+
+| Parameter | Meaning |
+|-----------|---------|
+| `outbound-policy=applied` | Between choosing the moment and answering you, the twin's declared **outbound policy** rewrote some of these bytes: the self-URL rewrite, the twin's `scrub.toml` rules, the default PII pass, the scrub-placeholder substitution. The body is still that moment position by position — every one of those passes is value-injective — but it is comparable against the recording **in the twin's outbound-policy space**, not against the raw recorded bytes. To diff a recording yourself, put it through the same policy first; `wraith check --target` does this for you. |
+
+Absence of the parameter means the policy changed nothing.
+
+**What "verbatim" covers.** Values at paths, not the octet string. A JSON
+moment is held parsed and re-serialized to answer you, so object keys come back
+in sorted order and the origin's whitespace is gone — a 529-byte
+pretty-printed recording answers as a 307-byte compact body of the same twelve
+leaves. Compare parsed documents, not bytes.
 
 `X-Wraith-Provenance: recorded` is strictly weaker and is *not* a substitute.
 A `recorded` response may be the last-wins recording of the URL — *a* recording,
@@ -241,11 +257,13 @@ own writes merged in. Neither carries `X-Wraith-Replay`. A `HEAD` has no body to
 replay and never carries it either.
 
 **Versioning.** The version belongs to the class, and is bumped when the promise
-that class makes changes. Compare the **whole value** for equality; do not parse
-`series-moment` out of it and ignore the version. A future `series-moment;v=2`
-means something this contract does not define, and a v1 reader must treat it as
-no claim at all — as must an unrecognized class, which is exactly how a reader
-written before `session-bound-moment;v=1` existed behaves.
+that class makes changes. Split the value on `;`, match every token exactly, and
+treat anything you do not recognize as **no claim at all** — a future
+`series-moment;v=2`, an unknown class, or an unknown parameter. Never ignore a
+token you do not know: a parameter you skip may be the one saying the bytes are
+not what you are about to compare them to. A reader written before
+`outbound-policy=applied` existed reads a disclosed replay as no claim, which is
+the safe reading — as does a reader written before `session-bound-moment;v=1`.
 
 **Fail-closed reading rule.** The absence of a recognized value is *never*
 evidence of exactness:
@@ -352,7 +370,7 @@ generated — and recorded bytes are scrubbed exactly as before.
 | `X-Wraith-Provenance` | ON | Per-response provenance word: `recorded \| template \| handler \| fixture \| fault \| miss`. Suppressed by `--no-provenance-headers`. |
 | `X-Wraith-Route` | ON | Matched route template (`METHOD /path/:param`). Suppressed by `--no-provenance-headers`. |
 | `X-Wraith-Exchange` | conditional | `<session_id>/<index>` source identity; present only for `recorded` responses whose model carries source identity. Suppressed by `--no-provenance-headers`. |
-| `X-Wraith-Replay` | conditional | Exactness claim for a replayed moment: `series-moment;v=1` (verbatim) or `session-bound-moment;v=1` (that moment with your own session-authored values substituted). Absent or unrecognized = no claim (fail-closed). Suppressed by `--no-provenance-headers`. |
+| `X-Wraith-Replay` | conditional | Exactness claim for a replayed moment: `series-moment;v=1` (verbatim) or `session-bound-moment;v=1` (that moment with your own session-authored values substituted), optionally `;outbound-policy=applied` when the twin's declared outbound policy rewrote some of the bytes. Absent or unrecognized = no claim (fail-closed). Suppressed by `--no-provenance-headers`. |
 | `X-Wraith-Twin-Age` | always | Twin age in whole seconds at server startup (does not tick; divide by 86400 for days). Anchors on the newest recording session; model-only twins fall back to `synth_timestamp`. |
 | `X-Wraith-Recorded-At` | when available | RFC 3339 UTC timestamp of the newest source recording. Omitted when the twin has no recordings on disk. |
 | `X-Wraith-Provenance-Counts` | `--debug` only | Coarse per-field origin counts (see above). |
