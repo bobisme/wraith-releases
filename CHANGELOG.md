@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.24.0 — 2026-08-27
+
+**Strict mode gets a precise meaning, and twins answer writes like the API they were recorded from.** This is the largest release yet: twenty-one rounds of conformance work in which the checker was made to assert far more than it used to, and every gap it exposed was fixed in the engine rather than excused. If you re-run `wraith check` after upgrading, expect findings it used to miss — your twin did not get worse; the check got more honest.
+
+### Strict fidelity
+
+- **Strict mode now applies the twin's outbound policy.** "Strict serves only recorded exchanges" was always a statement about where the body comes from — but the bytes previously left exactly as recorded, so a legacy recording holding real PII served that PII verbatim in strict mode while the default synth mode tokenized it. Strict responses now pass through the same self-URL rewrite, header allowlist, and outbound scrub as synth responses. Every pass is value-injective — two different recorded values never become one served value — so a strict response stays comparable to its recording position by position. **Should I do anything?** If you diff recordings against strict responses yourself, put the recording through the same policy first; `wraith check --target` already does. If something depended on strict serving a raw recorded value the scrub now tokenizes, add that field to `[pii] allowlist` in the twin's `scrub.toml`.
+- **Responses that are exact replays now say so.** A new `X-Wraith-Replay` header carries the twin's exactness claim: `series-moment;v=1` means the body is a verbatim recorded moment; `session-bound-moment;v=1` means that moment with your own session's values substituted at declared fields; either may add `;outbound-policy=applied` when the declared outbound policy rewrote some bytes on the way out. No header — or an unrecognized value or parameter — means no claim is being made: treat the body as synthesized. The full grammar is on the twin response contract page.
+
+### Serving and state
+
+- **Values the twin mints are no longer mangled by the outbound scrub.** A fresh id or token the twin invented for this response has no recording behind it and nothing to leak, but the scrub treated it like any other value — measured before the change, a stock rule was rewriting the middle out of every minted UUID, so consumers saw ids that failed their own format checks. Minted values now pass untouched. The exemption is by provenance, never by shape: only a value the twin drew end to end qualifies, and "looks like a UUID" is not an exemption, so recorded values are scrubbed exactly as before.
+- **Create endpoints on RPC-style APIs allocate fresh ids.** A JSON-RPC create previously answered every request with the same recorded id, so two creates in one test run appeared to produce one entity. The twin now allocates a fresh per-session id above the highest id in the recordings.
+- **An update with no id in its path answers with what it wrote.** RPC-style updates that name their target in the body used to answer from the template while the write landed silently; the response now reflects the entity the request just changed.
+- **A recorded refusal keeps refusing.** A route whose recording answered an error keeps replaying that refusal even after your session writes related entities — a recorded "gone" or validation error is never silently overturned into a success by session state.
+- **GraphQL mutations write to state.** An entity created through a GraphQL mutation is now visible to later queries in the same session, and list queries compose recorded pages with your session's writes instead of ignoring them.
+- **Pagination follows the request.** Cursor- and page-parameterized list requests serve successive windows of the collection; previously, once a session had writes, successive pages could come back identical.
+
+### Recording and audit
+
+- **`scrub.toml` gained a record-time `[pii] allowlist`.** Fields you list are exempted from PII tokenization at record time, for twins whose name-keyed fields are genuinely structural vocabulary rather than people. Values inside an allowlisted position still go through the free-text pass, so a real secret hiding there is still caught.
+- **The security audit asks the scrub itself.** Two new `doctor --security-audit` classes report recorded values that the twin's own outbound scrub would tokenize on serve but that the audit previously could not see — including identity handles and name fields. The audit calls the same decision functions the scrub uses, so what it reports and what the scrub does cannot drift apart. **Should I do anything?** Re-run `wraith doctor --security-audit`; new warnings there are pre-existing recorded values now visible, not new leaks.
+
 ## v0.23.1 — 2026-08-14
 
 **Two silent `state` traps closed.** Both were reported by a consumer agent rechecking their findings against 0.23.0, and both had the same shape: a call that looked like it worked and quietly did the wrong thing.

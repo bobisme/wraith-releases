@@ -345,9 +345,33 @@ body is intentionally malformed and no longer has a reliable JSON field map.
 > alias for `fuzzy`; it does **not** behave like `synth`. `serve` prints a
 > warning at startup when `fuzzy` is selected.
 
-In **strict** mode the twin serves only verbatim recorded exchanges. A
-request that matches a route but has no exact recorded response gets the
-fail-closed treatment regardless of the `--unknown-entity` flag.
+In **strict** mode the twin serves only recorded exchanges — it never
+synthesizes a body. A request that matches a route but has no exact recorded
+response gets the fail-closed treatment regardless of the `--unknown-entity`
+flag.
+
+"Only recorded exchanges" is a statement about where the body came from, not a
+promise that its octets left the recording untouched. The twin's **declared
+outbound policy** applies in strict mode exactly as it does in synth mode: the
+self-URL rewrite swaps the recorded upstream authority for the twin's own, the
+header allowlist drops vendor headers, and the outbound scrub tokenizes PII
+still sitting in the recording. Every one of those passes is value-injective —
+two different recorded values never become one served value — so a strict
+response stays comparable to the recording position by position, in the twin's
+outbound-policy space. To diff a recording against a strict response yourself,
+put the recording through the same policy first; `wraith check --target` does
+this for you.
+
+Where the twin has a synthesized model beside its recordings, the strict
+outbound scrub reads that model's per-route column evidence, so a Name-keyed
+leaf on a column the recordings show naming its carriers is tokenized under
+strict fidelity exactly as it is under synth fidelity. A recordings-only twin
+has no such evidence and its scrub judges each value on its own.
+
+Strict responses carry `X-Wraith-Provenance: recorded` and never carry
+[`X-Wraith-Replay`](#x-wraith-replay): strict replay makes no exactness claim,
+so there is no claim for `outbound-policy=applied` to qualify. Read a strict
+body with the same fail-closed rule as any response with no replay claim.
 
 ---
 

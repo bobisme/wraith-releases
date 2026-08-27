@@ -104,14 +104,10 @@ Use the per-session endpoints in parallel runs. `POST /__wraith/reset` is
 global — convenient in a single-developer loop, destructive to everyone else's
 in-flight tests on a shared server.
 
-### Known gap: rate-limit counters
-
-When `--rate-limit` is enabled, rate-limit counters are tracked per route and
-per session, but they live outside the session namespace. **No reset endpoint
-clears them** — neither the per-session reset nor the global one. A session that
-exhausted its quota keeps seeing `429` after a reset until the rate-limit window
-rolls over on its own, or the process restarts. Restart the twin if a test
-suite needs a guaranteed-clean rate-limit state.
+When `--rate-limit` is enabled, rate-limit counters follow the same rules:
+the per-session reset and teardown clear that session's counters, the global
+reset clears every session's, and a torn-down session id reused later starts
+with a fresh quota.
 
 ## Nothing persists to disk
 
