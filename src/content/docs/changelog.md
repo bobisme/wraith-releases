@@ -3,6 +3,13 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.24.1 — 2026-08-27
+
+**`wraith check` reads your state schema again.** Reported by a consumer within hours of v0.24.0 — with a diagnosis so precise we could go straight to the fix. Thank you.
+
+- **A handler that writes state no longer passes live and fails under check.** A Lua handler calling `state.put` on an entity type declared in the twin's `state/schema.json` served `200` under `wraith serve` but answered `500` under both `wraith check --in-memory` and `--wire` — with an error message telling you to declare the type in the very file that already declared it. The replay harness loaded the `[serve.lua]` settings but never the twin's on-disk state declarations; serve did. All four replay paths (`check --in-memory`, `check --wire`, the upstream comparison, and `wraith diff`) now read `state/schema.json` and `state/fixtures/` exactly as serve does. **Should I do anything?** If `wraith check` started reporting failures on a state-writing handler twin after v0.24.0, re-run it on v0.24.1 — the twin was never the problem. Worth knowing: v0.23.1 had the same defect but scored the failing replay as a PASS; v0.24.0 made the check honest, which is what surfaced this.
+- **Strict fidelity keeps a body consistent with itself.** Two refinements to the outbound policy at strict fidelity: a field the model knows is spelled from one of its own siblings (like a `full_name` built from a `name`) is re-spelled after the scrub rewrites the sibling, and a value the recordings show to be the API's own vocabulary on that route is served verbatim instead of tokenized — the same judgment the security audit already makes. And in every fidelity mode, a value the scrub tokenizes at one field no longer survives verbatim inside another field of the same response. **Should I do anything?** No — responses become more internally consistent, and nothing that was protected becomes less protected.
+
 ## v0.24.0 — 2026-08-27
 
 **Strict mode gets a precise meaning, and twins answer writes like the API they were recorded from.** This is the largest release yet: twenty-one rounds of conformance work in which the checker was made to assert far more than it used to, and every gap it exposed was fixed in the engine rather than excused. If you re-run `wraith check` after upgrading, expect findings it used to miss — your twin did not get worse; the check got more honest.
