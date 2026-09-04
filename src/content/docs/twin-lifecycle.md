@@ -47,6 +47,8 @@ wraith record stripe --port 8080
 
 Point your app at `http://localhost:8080` and exercise the API. Each request/response pair is saved as a WREC file with secrets scrubbed.
 
+**Re-recording an existing twin?** Since v0.25.0 the recorder reads the twin's synthesized model and scrubs a new session with the same per-route evidence a rescrub would use. Run `wraith synth <twin>` on the current version first — a model synthesized by an older wraith carries no route evidence, and the recorder will read every route as never measured. A first recording of a brand-new twin needs no such step.
+
 ### Multiple sessions
 
 Record multiple sessions to give the synthesizer enough variation. Use `/__wraith/new-session` to force a session boundary without restarting the proxy:

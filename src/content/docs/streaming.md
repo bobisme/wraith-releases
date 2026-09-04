@@ -110,6 +110,8 @@ The recorder captures HTTP/2 `Frame<Bytes>` items live, with no buffering, so lo
 
 Bidirectional methods like etcd `Watch` are accepted as server-streaming for capture purposes. The recorder skips client-direction frames in the projection. Pure bidi (interleaved client/server messages) isn't yet supported as a distinct shape.
 
+Since v0.25.0 the request half streams too, so a call whose *request* is a stream can be recorded — the copy the recorder scrubs is a side effect of forwarding rather than a precondition for it. Client-direction frames are scrubbed under the request's own content type. A trailers-only upstream error now reaches the client with the upstream's `grpc-status` instead of a stream closed with no trailers. gRPC also records in **forward** mode now: the intercepting proxy advertises ALPN `h2` alongside `http/1.1` and serves HTTP/2 through the same per-exchange capture, so a gRPC client pointed at wraith as an HTTPS proxy records the calls that previously needed reverse-mode recording.
+
 ## Currently out of scope
 
 - **WebSocket**: timed event replay is on the roadmap; no first-class support yet.

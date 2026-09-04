@@ -152,7 +152,7 @@ Single per-response value. One of:
 | `handler` | Produced by a Lua handler's successful return. |
 | `fixture` | Served from a seeded fixture entity (`state/fixtures/`), including a read that overlays fixture-entity fields onto a template. |
 | `fault` | A fault or rate-limit injection affected the served response. This includes short-circuit faults (Error/Throttle/Drop/Timeout), rate-limit 429, and Partial faults that truncate a normally rendered body before it reaches the wire. |
-| `miss` | A policy-produced fail-closed not-found: the twin had no coverage for this request and the `--unknown-entity not_found` gate (or a route-level miss) fired. The body was synthesized from the route's 4xx variant or the structured-501 route-miss envelope. Distinguishes "the twin is telling you it does not have this" from `recorded` (a verbatim provider 404 replay) and `template` (a synthesized *content* answer). |
+| `miss` | The twin had no coverage for this request. Either a policy-produced fail-closed not-found — the `--unknown-entity not_found` gate or a route-level miss fired, and the body was synthesized from the route's 4xx variant or the structured-501 route-miss envelope — or, since v0.25.0, an answer the engine invented outright: the no-variant-matched 404 and the malformed-body 400s, which reported `template` before. Distinguishes "the twin is telling you it does not have this" from `recorded` (a verbatim provider 404 replay) and `template` (a synthesized *content* answer). |
 
 > The first five words (`recorded`/`template`/`handler`/`fixture`/`fault`) are
 > shared with the per-field `X-Wraith-Provenance-Counts` header. `miss` is a

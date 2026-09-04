@@ -23,14 +23,16 @@ These always run and cannot be disabled by `scrub.toml`:
 
 | Scope         | Pattern                                                    | Action   |
 |---------------|------------------------------------------------------------|----------|
-| `header`      | `authorization`                                            | tokenize |
+| `header`      | `authorization` (since v0.25.0: a header parsing as RFC 7235 credentials with an IANA-registered scheme keeps its scheme word — `Bearer`, `Basic` — verbatim, and only the credentials are tokenized. Write path only; re-record to restore the scheme on recordings you already have) | tokenize |
 | `header`      | `cookie`                                                   | tokenize |
 | `header`      | `set-cookie` (since v0.17.0: every cookie **value** in the response header; names and attributes like `Path`/`Expires`/`HttpOnly` preserved) | tokenize |
 | `header`      | `x-api-key`                                                | tokenize |
-| `query_param` | `api_key`, `secret`, `password`, `token`, `access_token`, `refresh_token`, `client_secret` | tokenize |
+| `query_param` | `api_key`, `secret`, `password`, `token`, `access_token`, `refresh_token`, `client_secret` — since v0.25.0 matched by **name family** rather than exact name, as header scope already was, plus a signature family for request-signing parameters. The match is value-gated, so the public half of a signing envelope survives | tokenize |
 | `regex`       | `\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b` (16-digit card pattern) | redact (replaced with `[REDACTED]`) |
 
-The credit-card regex is paired with a Luhn-check guard inside `wraith doctor`, so authoring fields like 16-digit microsecond timestamps don't spuriously trigger it.
+The credit-card regex is paired with a Luhn-check guard inside `wraith doctor`, so authoring fields like 16-digit microsecond timestamps don't spuriously trigger it. Since v0.25.0 that guard is a property of the pattern rather than of the rule's provenance: a copy of the built-in card rule in your own `scrub.toml` inherits it too, so an all-digit UUID no longer has its middle redacted. `wraith doctor` also reports, at warning severity, any `scrub.toml` rule that only repeats a built-in — copies double-tokenize.
+
+A query-parameter rule rewrites only the value it matched: the rest of the query string is left byte-identical, so rescrubbing is stable and a URL-keyed recording still matches what the client sends.
 
 ## Default PII pass
 
@@ -41,6 +43,8 @@ In addition to the scrub rules, every recording runs through a PII detection pas
 - Email: `email`, `email_address`, `user_email`, `primary_email`, `contact_email`, and any `*_email` suffix.
 - Names: `name`, `full_name`, `first_name`, `last_name`, `given_name`, `family_name`, `display_name`, `username`, `login`, and any `*_name` suffix (`customer_name`, `author_name`).
 - Containers whose nested keys are scanned more aggressively: `author`, `committer`, `user`, `owner`, `customer`, `account`, `actor`, `sender`, `recipient`.
+
+Since v0.25.0 a key is split into words rather than on underscores, so camelCase and dotted spellings (`fullName`, `user.email`) reach the same families as their snake_case equivalents. `hostname` and `filename` still refuse to match the name family. Two related refusals: a key whose words name a position in a result set — a cursor or page handle — is not treated as a credential just because it contains the word `token`, and a three-segment dotted value is only tokenized as a JWT when its first segment really is a JOSE header, so a namespaced error code is recorded exactly as it came off the wire.
 
 **Value-shape detection** (regex on string leaves):
 
@@ -117,6 +121,8 @@ wraith doctor stripe --security-audit
 ```
 
 `--security-audit` extends doctor's default checks to scan every recording and every model file for PII patterns. Findings are reported with confidence levels and exit code 3 if any high-confidence findings are present without an explicit allow.
+
+Since v0.25.0 the audit also sees credential-named body fields, identity slugs held under a key ending in `path`, and a generic content key whose request URL names a credential in its last path segment. Each run prints how many exchanges the active HMAC key speaks for, alongside the key's fingerprint. Findings in the new classes are pre-existing recorded values that the audit previously could not see, not new leaks — `wraith recordings rescrub` repairs them in place.
 
 Two flags control the audit:
 

@@ -119,10 +119,14 @@ Run `wraith check --format json` to get the structured envelope:
 Each divergence carries:
 
 - **`path`** — JSON pointer to the field that diverged.
-- **`category`** — what kind of divergence (`value_mismatch`, `extra_field`, `missing_field`, `array_length_mismatch`, `status_code_mismatch`, etc.).
+- **`category`** — what kind of divergence (`value_mismatch`, `extra_field`, `missing_field`, `array_length_mismatch`, `status_code_mismatch`, `synthesized_refusal`, etc.).
 - **`severity`** — `error`, `warning`, or `info`. Only `error` affects scoring.
 - **`drift_id`** — stable fingerprint of (route + path + category + values). Cite it in suppression rules.
 - **`drift_type`** — semantic classification of *why* it drifted (`numeric_drift`, `url_drift`, `value_drift`, `host_rewrite`, `enum_expansion`, `additive_optional_field`, `field_removed`, `status_code_shift`).
+
+### `synthesized_refusal`
+
+Since v0.25.0, an exchange where the twin answered with wraith's *own* coverage-miss envelope — rather than a response modelled on the API's — is reported under this category, whatever status that envelope carried. It means the twin had nothing to say about the request, not that a field diverged. Before v0.25.0 such an exchange could score as a pass whenever the envelope's status happened to match the recording's. Fix these by recording the route; suppressing the category only hides that the twin has no coverage there.
 
 ## Two suppression layers
 
