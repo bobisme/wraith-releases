@@ -3,6 +3,38 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.26.1 — 2026-09-08
+
+**Twins get noticeably better at handling a caller the recordings never saw, and `wraith check` stops being polite about what it cannot explain.** Seven rounds of conformance work since v0.25.0. (v0.26.0 was tagged the same day but its macOS release build failed in a unit test before any binaries were published; v0.26.1 is the identical engine with that test fixed — there was never a working v0.26.0 to install.)
+
+Two things are worth knowing before you upgrade. `wraith check` got **stricter on purpose**: a response position synthesis could not explain used to be skipped; it is now compared against the values the recordings actually showed there. A twin that passed v0.25.0 can show *new* findings under v0.26.1 with no change in its own behaviour — the checker is telling you the truth it used to swallow, not reporting a regression. And `wraith coverage --corpus` (plus the zero-success corpus-integrity gate) now reads the **gRPC status trailer**, so a recorded gRPC refusal returned under an HTTP 200 counts as a failure, not a success; a gRPC twin will show a lower "successful exchange" count than before, which is the recording, not a regression.
+
+### Conformance check
+
+- **An unexplained field is held to what the recordings showed.** Where synthesis could not classify a response position, `wraith check` now compares it against the whole set of values its recordings gave — exact where they agreed on one, membership where they varied — instead of skipping it. **Should I do anything?** Re-run `wraith check`. New findings here are honest: the field was never actually verified before.
+- **A discriminated listing served the wrong kind of element is a finding.** Where a route's recordings are all of one tagged-union case, `wraith check` now compares the discriminator on every element the twin serves, not just the recorded ones.
+- **A re-minted identity is checked at the spelling a fresh caller would send**, not frozen at the recording's own spelling of an identity the twin re-minted per session.
+- **`wraith coverage --corpus` and the zero-success corpus-integrity gate read the gRPC status trailer.** A recorded gRPC call that answered `HTTP 200` with a failing gRPC status now counts as a failure, matching what the client actually saw.
+
+### Serving and state
+
+Twins get more general on a caller the recordings never exercised:
+
+- A caller can **delete what it just created**, addressed by the very name it chose — routes and state now follow a name the API minted for one run, not just a recorded literal.
+- A **create files under the request field the API republishes** — `metadata.name`-style and realm-style creates now read, update and delete back.
+- A **filtered listing answers the kind it was asked for**, instead of rotating over every other kind the collection can hold.
+- A **list envelope's page size, total and page count are computed from the answer** — echoing the caller's own paging parameters and the origin's recorded default — instead of being frozen from one recording.
+- A **created child names the parent this caller created** (a queue item, a build) instead of whichever recording the pool happened to pick.
+- A **poll loop walks the recorded moments in order**, the empty one included, where the recordings show the same repeated read producing a sequence.
+- A **membership listing includes a member that existed before the session began**, not only ones the session itself created.
+- An **absent member under an absent parent gets the origin's own recorded refusal** instead of a generic route-miss.
+- **Opaque (non-JSON) documents render the caller's own request values**, and Unicode punctuation now splits words correctly when the twin tokenizes a page for templating.
+- **Memorised listings and read-shape donation are read at the element array**, not the first array the response happens to list in key order.
+
+Every new field this release added to the persisted model is `#[serde(default)]`; a model written by v0.25.0 loads unchanged under v0.26.1.
+
+**Should I do anything?** Upgrade, then re-run `wraith synth` on each twin to pick up the synthesis-side changes above — the persisted model is only ever as good as the last synth that wrote it. Expect `wraith check` to report new findings on twins that used to pass; they are honest findings, not new bugs, and every twin that passed before still passes.
+
 ## v0.25.0 — 2026-09-04
 
 **A twin that refuses can no longer pass by coincidence, and `wraith record` captures traffic it could not see before.** Fourteen rounds of conformance work since v0.24.1. Two things are worth knowing before you upgrade. `wraith check` now reports an exchange the twin answered with wraith's own coverage-miss envelope as a finding of its own, so runs that used to score those as passes will show findings — the twin did not get worse, the check got more honest. And `wraith record` now reads the twin's synthesized model, so **run `wraith synth <twin>` on v0.25.0 before you re-record an existing twin**; a model built by an older version has no route evidence for the recorder to read, and the recorder will treat every route as never measured.
