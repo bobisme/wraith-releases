@@ -128,6 +128,10 @@ Each divergence carries:
 
 Since v0.25.0, an exchange where the twin answered with wraith's *own* coverage-miss envelope — rather than a response modelled on the API's — is reported under this category, whatever status that envelope carried. It means the twin had nothing to say about the request, not that a field diverged. Before v0.25.0 such an exchange could score as a pass whenever the envelope's status happened to match the recording's. Fix these by recording the route; suppressing the category only hides that the twin has no coverage there.
 
+### `stale_write_clock`
+
+Since v0.27.0, `wraith check` reports this at warning severity when an update's own answer re-serves a clock value it had already published instead of the value that update's write actually moved. It's a warning only — it never fails a run that used to pass.
+
 ## Two suppression layers
 
 Wraith separates two kinds of "this divergence is fine":

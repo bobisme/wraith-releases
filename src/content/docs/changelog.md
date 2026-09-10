@@ -3,6 +3,30 @@ title: Wraith release notes and API twin conformance progress
 description: Track Wraith releases, protocol support, conformance fixes, streaming work, and local API twin reliability changes.
 ---
 
+## v0.27.0 — 2026-09-10
+
+**A local drift loop now runs against your twins, `wraith refresh` stops hiding what it finds, and `wraith check` keeps time on writes.** Three rounds of conformance work since v0.26.1.
+
+Three things are worth knowing before you upgrade. There's a new **local drift loop**: one command records a fresh session against a fixture you're running, checks it against your twin, re-synthesizes, and logs the before-and-after score — so you can measure drift between real recordings instead of waiting for one. It isn't scheduled by default; a user-level timer unit ships in the repo for anyone who wants it run nightly. **`wraith refresh` now reports the same conformance number `wraith check` reports** — its old number came from a compensating policy that could hide a real drift behind a passing score. And **`wraith check` keeps time on writes**: an update that re-serves a timestamp it had already published, instead of the one its own write just set, is now reported as a new warning-level finding, `stale_write_clock`.
+
+### Conformance check
+
+- **A stale write clock is a finding.** Where an update's own answer repeats the entity's already-published clock value instead of the value that update's write moved, `wraith check` now reports it at warning severity. Warnings only — nothing that passed before now fails.
+- **`wraith refresh` prints `wraith check`'s number.** Its active-probe planner has a known gap — it currently plans probes by entity type rather than by the routes your recordings actually exercise — and that's being worked on next.
+
+### Serving and state
+
+Twins answer better to a caller the recordings never saw:
+
+- An **alias address is resolved from the member the session itself created**, instead of spelling the alias word back literally.
+- A **request names its own transition**, so a write following a caller's own prior write is addressed correctly.
+- A **listing is scoped by the create that produced it**, and a **member-less path tail is read as one resource** instead of an empty collection.
+- A **served twin stops re-tokenizing an address assembled from scrubbed recordings**, so what you see served matches what `wraith check` scores in memory.
+
+Every field this release added to the persisted model is `#[serde(default)]`; a model written by v0.26.1 loads unchanged under v0.27.0.
+
+**Should I do anything?** Upgrade, then re-run `wraith synth` on each twin. Expect some new `stale_write_clock` warnings on twins whose updates re-serve a timestamp they already published — those are honest, and every twin that passed before still passes.
+
 ## v0.26.1 — 2026-09-08
 
 **Twins get noticeably better at handling a caller the recordings never saw, and `wraith check` stops being polite about what it cannot explain.** Seven rounds of conformance work since v0.25.0. (v0.26.0 was tagged the same day but its macOS release build failed in a unit test before any binaries were published; v0.26.1 is the identical engine with that test fixed — there was never a working v0.26.0 to install.)
