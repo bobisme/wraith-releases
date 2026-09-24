@@ -60,6 +60,7 @@ const H = HEADLINE;
             <div class="trust"><span class="k">{frac(H.held_out.newest)}</span> pass with their newest session held out</div>
             <div class="trust"><span class="k">{H.fresh.pass}/{H.fresh.measured}</span> pass a session recorded fresh against a local origin</div>
             <div class="trust"><span class="k">{count(H.corpus.sessions)}</span> recorded sessions across {H.corpus.twins} services</div>
+            {H.performance && <div class="trust"><span class="k">{H.performance.p50_ms} ms</span> median reply from a served twin (p95 {H.performance.p95_ms} ms), benchmarked {H.performance.date}</div>}
           </div>
           <p class="trust-date">
             Measured on {H.measured_at.date} against wraith's own recorded corpus.
@@ -524,12 +525,12 @@ const H = HEADLINE;
         <li class="usecase">
           <div class="uc-tag">FOR AGENTS</div>
           <h3>A service they can drive, not simulate.</h3>
-          <p>Agents do better when the environment behaves. Twins give them a loop they can trust: every POST persists, every GET returns, and rate limits fire when they should.</p>
+          <p>Agents do better when the environment behaves. Twins give them a loop they can trust: every POST persists and every GET returns.</p>
         </li>
         <li class="usecase">
           <div class="uc-tag">FOR TESTS</div>
           <h3>CI that doesn't flake.</h3>
-          <p>Point tests at localhost. No rate limits, no auth dance, no shared sandbox stepping on your fixtures. Millisecond replies, every time, forever.</p>
+          <p>Point tests at localhost. No rate limits, no auth dance, no shared sandbox stepping on your fixtures.{H.performance ? ` A median reply in ${H.performance.p50_ms} ms (benchmarked ${H.performance.date}).` : ''}</p>
         </li>
         <li class="usecase">
           <div class="uc-tag">FOR DEMOS</div>

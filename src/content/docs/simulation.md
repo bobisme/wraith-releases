@@ -152,7 +152,7 @@ Two modes of rate limiting that share the same engine and response shape:
 
 ### WIR-stored limits
 
-Your recorded API may have rate limits in its responses. Once synth-side detection lands (planned for a future release), those limits will be populated into the twin's WIR automatically. For now, you can pre-populate `rate_limit` on routes manually or use CLI overrides:
+When your recordings contain 429 responses or `X-RateLimit-*` headers, `wraith synth` infers a per-route limit and writes it into the twin's WIR. The inference does not yet model one budget shared across routes, and the twin enforces the limit only under `wraith serve --rate-limit`. You can also set `rate_limit` on routes by hand or use CLI overrides:
 
 ```sh
 wraith serve myapi --rate-limit

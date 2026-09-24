@@ -10,8 +10,11 @@
     "measured. strict_replay.pair is the per-finding difference between the",
     "in-memory and strict-replay arms, [added, removed]; [0, 0] = identical.",
     "fresh: a session recorded from a container started that day, scored",
-    "against the committed model before any re-synthesis. performance is null",
-    "until a published benchmark exists."
+    "against the committed model before any re-synthesis. performance is the",
+    "`headline` block of the newest corpus/bench-<date>.json (scripts/bench.py,",
+    "`just bench`): client-side serve latency at concurrency 1 on the largest",
+    "REST twin and check exchanges per minute, each a median over the runs",
+    "with its range."
   ],
   "corpus": {
     "exchanges": 14857,
@@ -57,7 +60,30 @@
     "date": "2026-09-18",
     "round": 74
   },
-  "performance": null,
+  "performance": {
+    "check_exchanges_per_min": 63532,
+    "check_exchanges_per_min_range": [
+      61664,
+      68926
+    ],
+    "concurrency": 1,
+    "date": "2026-09-24",
+    "p50_ms": 0.161,
+    "p50_ms_range": [
+      0.157,
+      0.19
+    ],
+    "p95_ms": 0.972,
+    "p95_ms_range": [
+      0.951,
+      1.135
+    ],
+    "p99_ms": 1.604,
+    "rps": 4015.1,
+    "runs": 3,
+    "source": "corpus/bench-2026-09-24.json",
+    "twin": "forgejo"
+  },
   "served": {
     "errors": 181,
     "sessions": {
