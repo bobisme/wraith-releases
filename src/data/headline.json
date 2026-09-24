@@ -1,0 +1,80 @@
+{
+  "_README": [
+    "CORPUS HEADLINE (bn-wgxa8). Written by scripts/headline.py at the round",
+    "close; never edit by hand. `scripts/headline.py --check` (in `just check`,",
+    "via the docs-drift-gate recipe) holds it equal to the AGENTS.md headline",
+    "and the holdout and fresh baselines; scripts/docs-drift-gate.py holds",
+    "README.md's Status numbers equal to it; the wraith.cx trust row is",
+    "rendered from a copy of it (`npm run sync-headline` in wraith-releases).",
+    "Every fraction is {pass, of}: twins or sessions that pass, out of those",
+    "measured. strict_replay.pair is the per-finding difference between the",
+    "in-memory and strict-replay arms, [added, removed]; [0, 0] = identical.",
+    "fresh: a session recorded from a container started that day, scored",
+    "against the committed model before any re-synthesis. performance is null",
+    "until a published benchmark exists."
+  ],
+  "corpus": {
+    "exchanges": 14857,
+    "routes": 491,
+    "sessions": 362,
+    "twins": 29,
+    "variants": 713
+  },
+  "fresh": {
+    "at_zero": 6,
+    "fixtures": 18,
+    "measured": 17,
+    "pass": 9
+  },
+  "held_out": {
+    "newest": {
+      "errors": 78,
+      "of": 27,
+      "pass": 22,
+      "warnings": 32
+    },
+    "oldest": {
+      "errors": 133,
+      "of": 27,
+      "pass": 20,
+      "warnings": 33
+    }
+  },
+  "in_memory": {
+    "errors": 105,
+    "sessions": {
+      "of": 362,
+      "pass": 350
+    },
+    "twins": {
+      "of": 29,
+      "pass": 28
+    },
+    "warnings": 76
+  },
+  "measured_at": {
+    "commit": "93d3a7a7",
+    "date": "2026-09-18",
+    "round": 74
+  },
+  "performance": null,
+  "served": {
+    "errors": 181,
+    "sessions": {
+      "of": 362,
+      "pass": 345
+    },
+    "twins": {
+      "of": 29,
+      "pass": 26
+    },
+    "warnings": 76
+  },
+  "strict_replay": {
+    "equals_in_memory": true,
+    "pair": [
+      0,
+      0
+    ]
+  }
+}

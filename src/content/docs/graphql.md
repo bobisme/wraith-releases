@@ -63,10 +63,10 @@ If your recordings include real 4xx exchanges (validation errors, schema errors)
 
 Two GraphQL twins ship in the test corpus and validate the approach at real-world scale:
 
-- **Linear** — 21 operation variants on `POST /graphql`, including mutations like `issueCreate`, `issueArchive`, `commentCreate` and queries like `teams`, `viewer`, `issue`.
-- **Saleor** — 17 operation variants on `POST /graphql/`, mixing storefront queries with admin mutations.
+- **Linear** — 30 response variants on `POST /graphql`, including mutations like `issueCreate`, `issueArchive`, `commentCreate` and queries like `teams`, `viewer`, `issue`.
+- **Saleor** — 24 response variants on `POST /graphql/`, mixing storefront queries with admin mutations.
 
-Both twins serve at zero divergences against their recordings. If you've used wraith for REST APIs and were waiting on GraphQL support before twinning your own GraphQL backend — this is it.
+Both twins pass their conformance check against their recordings with zero errors (measured 2026-09-18; Saleor carries two array-length warnings). If you've used wraith for REST APIs and were waiting on GraphQL support before twinning your own GraphQL backend — this is it.
 
 ## Known limitations
 

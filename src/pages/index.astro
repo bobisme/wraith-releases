@@ -1,6 +1,8 @@
 ---
 import Layout from '../layouts/Landing.astro';
 import { LATEST_VERSION } from '../version.ts';
+import { HEADLINE, frac, count } from '../headline.ts';
+const H = HEADLINE;
 ---
 
 <Layout
@@ -53,12 +55,16 @@ import { LATEST_VERSION } from '../version.ts';
             Latest release: <a href="/changelog/">v{LATEST_VERSION}</a>. Pin a version with <code>WRAITH_VERSION</code>.
           </p>
 
-          <div class="trust-row">
-            <div class="trust"><span class="k">100%</span> corpus conformance</div>
-            <div class="trust"><span class="k">23</span> recorded service twins</div>
-            <div class="trust"><span class="k">9,040</span> verified exchanges</div>
-            <div class="trust"><span class="k">1,754</span> routes, 1,878 variants</div>
+          <div class="trust-row" aria-label="Corpus measurements">
+            <div class="trust"><span class="k">{frac(H.in_memory.twins)}</span> twins pass the recordings they were built from{H.strict_replay.equals_in_memory ? ', in memory and in strict replay alike' : ''}</div>
+            <div class="trust"><span class="k">{frac(H.held_out.newest)}</span> pass with their newest session held out</div>
+            <div class="trust"><span class="k">{H.fresh.pass}/{H.fresh.measured}</span> pass a session recorded fresh against a local origin</div>
+            <div class="trust"><span class="k">{count(H.corpus.sessions)}</span> recorded sessions across {H.corpus.twins} services</div>
           </div>
+          <p class="trust-date">
+            Measured on {H.measured_at.date} against wraith's own recorded corpus.
+            <a href="/conformance/">What a pass means</a>.
+          </p>
         </div>
 
         <!-- VISUALIZATION -->
@@ -141,7 +147,7 @@ import { LATEST_VERSION } from '../version.ts';
                   <rect x="340" y="126" width="86" height="62" fill="url(#glow-violet)" opacity=".25"/>
                   <text x="383" y="150" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#a78bfa" letter-spacing=".12em">TWIN</text>
                   <text x="383" y="166" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#a78bfa">deterministic</text>
-                  <text x="383" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7df9ff">:8081 &middot; 0ms</text>
+                  <text x="383" y="178" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="#7df9ff">:8081</text>
                 </g>
 
                 <!-- Connection lines -->
@@ -236,8 +242,7 @@ import { LATEST_VERSION } from '../version.ts';
                 <g transform="translate(0, 150)">
                   <text x="0" y="0" font-family="JetBrains Mono" font-size="9" fill="#5eead4">&#9670; deterministic</text>
                   <text x="100" y="0" font-family="JetBrains Mono" font-size="9" fill="#5eead4">&#9670; stateful</text>
-                  <text x="200" y="0" font-family="JetBrains Mono" font-size="9" fill="#5eead4">&#9670; 0ms p50</text>
-                  <text x="290" y="0" font-family="JetBrains Mono" font-size="9" fill="#5eead4">&#9670; 100%</text>
+                  <text x="200" y="0" font-family="JetBrains Mono" font-size="9" fill="#5eead4">&#9670; in-memory = strict</text>
                 </g>
               </g>
 
@@ -294,7 +299,7 @@ import { LATEST_VERSION } from '../version.ts';
               <div class="verb">wraith <span class="sub-cmd">check</span> myapi</div>
               <div class="desc">Replay every recorded exchange through the model. Semantic diff per route.</div>
             </div>
-            <div class="step-meta">100% pass</div>
+            <div class="step-meta">4/4 sessions</div>
           </button>
           <button type="button" class="step" data-i="4" aria-pressed="false">
             <div class="step-num">05</div>
@@ -817,6 +822,12 @@ import { LATEST_VERSION } from '../version.ts';
     flex: 1 1 240px;
   }
   .trust .k { color: var(--ghost); font-weight: 500; }
+  .trust-date {
+    margin: 14px 0 0;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--ink-mute); letter-spacing: .04em;
+  }
+  .trust-date a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 
   /* =======================================================
      Hero Viz
@@ -1440,7 +1451,7 @@ import { LATEST_VERSION } from '../version.ts';
             cmd: 'wraith check myapi --in-memory',
             hl: '<span class="tk-kw">wraith</span> <span class="tk-sub">check</span> myapi <span class="tk-arg">--in-memory</span>',
           },
-          { html: '  <span class="ok">[PASS]</span> myapi: <span class="tk-num">4/4</span> sessions passed (<span class="tk-num">100%</span>)' },
+          { html: '  <span class="ok">[PASS]</span> myapi: <span class="tk-num">4/4</span> sessions passed' },
           { html: '  <span class="tk-mute">divergences:</span> <span class="tk-num">3</span>' },
           { html: '    <span class="tk-mute">extra_field</span>   <span class="tk-num">2</span> <span class="tk-warn">(warning)</span>' },
           { html: '    <span class="tk-mute">type_mismatch</span> <span class="tk-num">1</span> <span class="tk-warn">(warning)</span>' },
@@ -1864,7 +1875,7 @@ import { LATEST_VERSION } from '../version.ts';
         gridServe.style.opacity = '1';
         laneLabel.textContent = 'CHECK · TWIN vs. REAL';
         laneLabel.setAttribute('fill', '#5eead4');
-        laneCounter.textContent = '100% pass';
+        laneCounter.textContent = '4/4 sessions pass';
         laneCounter.setAttribute('fill', '#5eead4');
 
         const cells = gridServe.querySelectorAll('.conf-cell');
@@ -1912,12 +1923,12 @@ import { LATEST_VERSION } from '../version.ts';
         gridServe.querySelectorAll('.conf-cell').forEach(c => c.setAttribute('opacity', '.85'));
         laneLabel.textContent = 'TWIN LIVE · DETERMINISTIC';
         laneLabel.setAttribute('fill', '#a78bfa');
-        laneCounter.textContent = '0ms p50 · exit 0';
+        laneCounter.textContent = 'serving · exit 0';
         laneCounter.setAttribute('fill', '#a78bfa');
 
         label.textContent = 'PHASE 04 · SERVE';
         label.setAttribute('fill', '#a78bfa');
-        count.textContent = 'twin on :8081 · deterministic · stateful · 0ms first byte';
+        count.textContent = 'twin on :8081 · deterministic · stateful';
       }
     }
 

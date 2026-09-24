@@ -8,7 +8,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "sync-changelog": "node scripts/sync-changelog-unreleased.mjs"
+    "sync-changelog": "node scripts/sync-changelog-unreleased.mjs",
+    "sync-headline": "node scripts/sync-headline.mjs"
   },
   "repository": {
     "type": "git",
