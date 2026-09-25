@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Landing.astro';
 import { LATEST_VERSION } from '../version.ts';
-import { HEADLINE, frac, count } from '../headline.ts';
+import { HEADLINE } from '../headline.ts';
 const H = HEADLINE;
 ---
 
@@ -53,18 +53,6 @@ const H = HEADLINE;
           <p class="install-caption">
             Local-first CLI. Checksum verified. Prebuilt binaries for Linux x86_64 and macOS Apple silicon.
             Latest release: <a href="/changelog/">v{LATEST_VERSION}</a>. Pin a version with <code>WRAITH_VERSION</code>.
-          </p>
-
-          <div class="trust-row" aria-label="Corpus measurements">
-            <div class="trust"><span class="k">{frac(H.in_memory.twins)}</span> twins pass the recordings they were built from{H.strict_replay.equals_in_memory ? ', in memory and in strict replay alike' : ''}</div>
-            <div class="trust"><span class="k">{frac(H.held_out.newest)}</span> pass with their newest session held out</div>
-            <div class="trust"><span class="k">{H.fresh.pass}/{H.fresh.measured}</span> pass a session recorded fresh against a local origin</div>
-            <div class="trust"><span class="k">{count(H.corpus.sessions)}</span> recorded sessions across {H.corpus.twins} services</div>
-            {H.performance && <div class="trust"><span class="k">{H.performance.p50_ms} ms</span> median reply from a served twin (p95 {H.performance.p95_ms} ms), benchmarked {H.performance.date}</div>}
-          </div>
-          <p class="trust-date">
-            Measured on {H.measured_at.date} against wraith's own recorded corpus.
-            <a href="/conformance/">What a pass means</a>.
           </p>
         </div>
 
@@ -811,24 +799,6 @@ const H = HEADLINE;
     font-family: var(--font-mono);
     color: var(--ghost);
   }
-  .trust-row {
-    display: flex; gap: 32px; flex-wrap: wrap;
-    padding-top: 28px;
-    border-top: 1px solid var(--line);
-  }
-  .trust {
-    font-family: var(--font-mono); font-size: 11px;
-    color: var(--ink-mute); letter-spacing: .06em;
-    display: flex; align-items: center; gap: 10px;
-    flex: 1 1 240px;
-  }
-  .trust .k { color: var(--ghost); font-weight: 500; }
-  .trust-date {
-    margin: 14px 0 0;
-    font-family: var(--font-mono); font-size: 11px;
-    color: var(--ink-mute); letter-spacing: .04em;
-  }
-  .trust-date a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 
   /* =======================================================
      Hero Viz
@@ -1375,7 +1345,6 @@ const H = HEADLINE;
     .askai { grid-template-columns: 1fr; }
     .footer-inner { grid-template-columns: 1fr; }
     .cta-row { flex-direction: column; align-items: stretch; }
-    .trust-row { gap: 16px; }
   }
 </style>
 
